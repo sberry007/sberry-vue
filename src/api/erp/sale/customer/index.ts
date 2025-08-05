@@ -23,36 +23,36 @@ export interface CustomerVO {
 export const CustomerApi = {
   // 查询客户分页
   getCustomerPage: async (params: any) => {
-    return await request.get({ url: `/erp/customer/page`, params })
+    return await request.get({ url: `/erp-sale/customer/page`, params })
   },
 
   // 查询客户精简列表
   getCustomerSimpleList: async () => {
-    return await request.get({ url: `/erp/customer/simple-list` })
+    return await request.get({ url: `/erp-sale/customer/simple-list` })
   },
 
   // 查询客户详情
   getCustomer: async (id: number) => {
-    return await request.get({ url: `/erp/customer/get?id=` + id })
+    return await request.get({ url: `/erp-sale/customer/get?id=` + id })
   },
 
   // 新增客户
   createCustomer: async (data: CustomerVO) => {
-    return await request.post({ url: `/erp/customer/create`, data })
+    return await request.post({ url: `/erp-sale/customer/create`, data })
   },
 
   // 修改客户
   updateCustomer: async (data: CustomerVO) => {
-    return await request.put({ url: `/erp/customer/update`, data })
+    return await request.put({ url: `/erp-sale/customer/update`, data })
   },
 
   // 删除客户
   deleteCustomer: async (id: number) => {
-    return await request.delete({ url: `/erp/customer/delete?id=` + id })
+    return await request.delete({ url: `/erp-sale/customer/delete?id=` + id })
   },
 
   // 导出客户 Excel
   exportCustomer: async (params) => {
-    return await request.download({ url: `/erp/customer/export-excel`, params })
+    return await request.download({ url: `/erp-sale/customer/export-excel`, params })
   }
 }

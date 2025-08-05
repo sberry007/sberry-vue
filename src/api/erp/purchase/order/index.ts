@@ -18,28 +18,28 @@ export interface PurchaseOrderVO {
 export const PurchaseOrderApi = {
   // 查询采购订单分页
   getPurchaseOrderPage: async (params: any) => {
-    return await request.get({ url: `/erp/purchase-order/page`, params })
+    return await request.get({ url: `/erp-purchase/order/page`, params })
   },
 
   // 查询采购订单详情
   getPurchaseOrder: async (id: number) => {
-    return await request.get({ url: `/erp/purchase-order/get?id=` + id })
+    return await request.get({ url: `/erp-purchase/order/get?id=` + id })
   },
 
   // 新增采购订单
   createPurchaseOrder: async (data: PurchaseOrderVO) => {
-    return await request.post({ url: `/erp/purchase-order/create`, data })
+    return await request.post({ url: `/erp-purchase/order/create`, data })
   },
 
   // 修改采购订单
   updatePurchaseOrder: async (data: PurchaseOrderVO) => {
-    return await request.put({ url: `/erp/purchase-order/update`, data })
+    return await request.put({ url: `/erp-purchase/order/update`, data })
   },
 
   // 更新采购订单的状态
   updatePurchaseOrderStatus: async (id: number, status: number) => {
     return await request.put({
-      url: `/erp/purchase-order/update-status`,
+      url: `/erp-purchase/order/update-status`,
       params: {
         id,
         status
@@ -50,7 +50,7 @@ export const PurchaseOrderApi = {
   // 删除采购订单
   deletePurchaseOrder: async (ids: number[]) => {
     return await request.delete({
-      url: `/erp/purchase-order/delete`,
+      url: `/erp-purchase/order/delete`,
       params: {
         ids: ids.join(',')
       }
@@ -59,6 +59,6 @@ export const PurchaseOrderApi = {
 
   // 导出采购订单 Excel
   exportPurchaseOrder: async (params: any) => {
-    return await request.download({ url: `/erp/purchase-order/export-excel`, params })
+    return await request.download({ url: `/erp-purchase/order/export-excel`, params })
   }
 }

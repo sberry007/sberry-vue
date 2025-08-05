@@ -16,28 +16,28 @@ export interface SaleOutVO {
 export const SaleOutApi = {
   // 查询销售出库分页
   getSaleOutPage: async (params: any) => {
-    return await request.get({ url: `/erp/sale-out/page`, params })
+    return await request.get({ url: `/erp-sale/out/page`, params })
   },
 
   // 查询销售出库详情
   getSaleOut: async (id: number) => {
-    return await request.get({ url: `/erp/sale-out/get?id=` + id })
+    return await request.get({ url: `/erp-sale/out/get?id=` + id })
   },
 
   // 新增销售出库
   createSaleOut: async (data: SaleOutVO) => {
-    return await request.post({ url: `/erp/sale-out/create`, data })
+    return await request.post({ url: `/erp-sale/out/create`, data })
   },
 
   // 修改销售出库
   updateSaleOut: async (data: SaleOutVO) => {
-    return await request.put({ url: `/erp/sale-out/update`, data })
+    return await request.put({ url: `/erp-sale/out/update`, data })
   },
 
   // 更新销售出库的状态
   updateSaleOutStatus: async (id: number, status: number) => {
     return await request.put({
-      url: `/erp/sale-out/update-status`,
+      url: `/erp-sale/out/update-status`,
       params: {
         id,
         status
@@ -48,7 +48,7 @@ export const SaleOutApi = {
   // 删除销售出库
   deleteSaleOut: async (ids: number[]) => {
     return await request.delete({
-      url: `/erp/sale-out/delete`,
+      url: `/erp-sale/out/delete`,
       params: {
         ids: ids.join(',')
       }
@@ -57,6 +57,6 @@ export const SaleOutApi = {
 
   // 导出销售出库 Excel
   exportSaleOut: async (params: any) => {
-    return await request.download({ url: `/erp/sale-out/export-excel`, params })
+    return await request.download({ url: `/erp-sale/out/export-excel`, params })
   }
 }

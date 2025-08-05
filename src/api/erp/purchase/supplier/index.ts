@@ -23,36 +23,36 @@ export interface SupplierVO {
 export const SupplierApi = {
   // 查询供应商分页
   getSupplierPage: async (params: any) => {
-    return await request.get({ url: `/erp/supplier/page`, params })
+    return await request.get({ url: `/erp-purchase/supplier/page`, params })
   },
 
   // 获得供应商精简列表
   getSupplierSimpleList: async () => {
-    return await request.get({ url: `/erp/supplier/simple-list` })
+    return await request.get({ url: `/erp-purchase/supplier/simple-list` })
   },
 
   // 查询供应商详情
   getSupplier: async (id: number) => {
-    return await request.get({ url: `/erp/supplier/get?id=` + id })
+    return await request.get({ url: `/erp-purchase/supplier/get?id=` + id })
   },
 
   // 新增供应商
   createSupplier: async (data: SupplierVO) => {
-    return await request.post({ url: `/erp/supplier/create`, data })
+    return await request.post({ url: `/erp-purchase/supplier/create`, data })
   },
 
   // 修改供应商
   updateSupplier: async (data: SupplierVO) => {
-    return await request.put({ url: `/erp/supplier/update`, data })
+    return await request.put({ url: `/erp-purchase/supplier/update`, data })
   },
 
   // 删除供应商
   deleteSupplier: async (id: number) => {
-    return await request.delete({ url: `/erp/supplier/delete?id=` + id })
+    return await request.delete({ url: `/erp-purchase/supplier/delete?id=` + id })
   },
 
   // 导出供应商 Excel
   exportSupplier: async (params) => {
-    return await request.download({ url: `/erp/supplier/export-excel`, params })
+    return await request.download({ url: `/erp-purchase/supplier/export-excel`, params })
   }
 }

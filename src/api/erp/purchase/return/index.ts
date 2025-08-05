@@ -16,28 +16,28 @@ export interface PurchaseReturnVO {
 export const PurchaseReturnApi = {
   // 查询采购退货分页
   getPurchaseReturnPage: async (params: any) => {
-    return await request.get({ url: `/erp/purchase-return/page`, params })
+    return await request.get({ url: `/erp-purchase/return/page`, params })
   },
 
   // 查询采购退货详情
   getPurchaseReturn: async (id: number) => {
-    return await request.get({ url: `/erp/purchase-return/get?id=` + id })
+    return await request.get({ url: `/erp-purchase/return/get?id=` + id })
   },
 
   // 新增采购退货
   createPurchaseReturn: async (data: PurchaseReturnVO) => {
-    return await request.post({ url: `/erp/purchase-return/create`, data })
+    return await request.post({ url: `/erp-purchase/return/create`, data })
   },
 
   // 修改采购退货
   updatePurchaseReturn: async (data: PurchaseReturnVO) => {
-    return await request.put({ url: `/erp/purchase-return/update`, data })
+    return await request.put({ url: `/erp-purchase/return/update`, data })
   },
 
   // 更新采购退货的状态
   updatePurchaseReturnStatus: async (id: number, status: number) => {
     return await request.put({
-      url: `/erp/purchase-return/update-status`,
+      url: `/erp-purchase/return/update-status`,
       params: {
         id,
         status
@@ -48,7 +48,7 @@ export const PurchaseReturnApi = {
   // 删除采购退货
   deletePurchaseReturn: async (ids: number[]) => {
     return await request.delete({
-      url: `/erp/purchase-return/delete`,
+      url: `/erp-purchase/return/delete`,
       params: {
         ids: ids.join(',')
       }
@@ -57,6 +57,6 @@ export const PurchaseReturnApi = {
 
   // 导出采购退货 Excel
   exportPurchaseReturn: async (params: any) => {
-    return await request.download({ url: `/erp/purchase-return/export-excel`, params })
+    return await request.download({ url: `/erp-purchase/return/export-excel`, params })
   }
 }

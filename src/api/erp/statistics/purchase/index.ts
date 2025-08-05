@@ -18,11 +18,11 @@ export interface ErpPurchaseTimeSummaryRespVO {
 export const PurchaseStatisticsApi = {
   // 获得采购统计
   getPurchaseSummary: async (): Promise<ErpPurchaseSummaryRespVO> => {
-    return await request.get({ url: `/erp/purchase-statistics/summary` })
+    return await request.get({ url: `/erp-purchase/statistics/summary` })
   },
 
   // 获得采购时间段统计
   getPurchaseTimeSummary: async (): Promise<ErpPurchaseTimeSummaryRespVO[]> => {
-    return await request.get({ url: `/erp/purchase-statistics/time-summary` })
+    return await request.get({ url: `/erp-purchase/statistics/time-summary` })
   }
 }

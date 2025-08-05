@@ -18,33 +18,33 @@ export interface WarehouseVO {
 export const WarehouseApi = {
   // 查询仓库分页
   getWarehousePage: async (params: any) => {
-    return await request.get({ url: `/erp/warehouse/page`, params })
+    return await request.get({ url: `/erp-stock/warehouse/page`, params })
   },
 
   // 查询仓库精简列表
   getWarehouseSimpleList: async () => {
-    return await request.get({ url: `/erp/warehouse/simple-list` })
+    return await request.get({ url: `/erp-stock/warehouse/simple-list` })
   },
 
   // 查询仓库详情
   getWarehouse: async (id: number) => {
-    return await request.get({ url: `/erp/warehouse/get?id=` + id })
+    return await request.get({ url: `/erp-stock/warehouse/get?id=` + id })
   },
 
   // 新增仓库
   createWarehouse: async (data: WarehouseVO) => {
-    return await request.post({ url: `/erp/warehouse/create`, data })
+    return await request.post({ url: `/erp-stock/warehouse/create`, data })
   },
 
   // 修改仓库
   updateWarehouse: async (data: WarehouseVO) => {
-    return await request.put({ url: `/erp/warehouse/update`, data })
+    return await request.put({ url: `/erp-stock/warehouse/update`, data })
   },
 
   // 修改仓库默认状态
   updateWarehouseDefaultStatus: async (id: number, defaultStatus: boolean) => {
     return await request.put({
-      url: `/erp/warehouse/update-default-status`,
+      url: `/erp-stock/warehouse/update-default-status`,
       params: {
         id,
         defaultStatus
@@ -54,11 +54,11 @@ export const WarehouseApi = {
 
   // 删除仓库
   deleteWarehouse: async (id: number) => {
-    return await request.delete({ url: `/erp/warehouse/delete?id=` + id })
+    return await request.delete({ url: `/erp-stock/warehouse/delete?id=` + id })
   },
 
   // 导出仓库 Excel
   exportWarehouse: async (params) => {
-    return await request.download({ url: `/erp/warehouse/export-excel`, params })
+    return await request.download({ url: `/erp-stock/warehouse/export-excel`, params })
   }
 }

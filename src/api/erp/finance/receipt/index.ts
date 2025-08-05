@@ -15,28 +15,28 @@ export interface FinanceReceiptVO {
 export const FinanceReceiptApi = {
   // 查询收款单分页
   getFinanceReceiptPage: async (params: any) => {
-    return await request.get({ url: `/erp/finance-receipt/page`, params })
+    return await request.get({ url: `/erp-finance/receipt/page`, params })
   },
 
   // 查询收款单详情
   getFinanceReceipt: async (id: number) => {
-    return await request.get({ url: `/erp/finance-receipt/get?id=` + id })
+    return await request.get({ url: `/erp-finance/receipt/get?id=` + id })
   },
 
   // 新增收款单
   createFinanceReceipt: async (data: FinanceReceiptVO) => {
-    return await request.post({ url: `/erp/finance-receipt/create`, data })
+    return await request.post({ url: `/erp-finance/receipt/create`, data })
   },
 
   // 修改收款单
   updateFinanceReceipt: async (data: FinanceReceiptVO) => {
-    return await request.put({ url: `/erp/finance-receipt/update`, data })
+    return await request.put({ url: `/erp-finance/receipt/update`, data })
   },
 
   // 更新收款单的状态
   updateFinanceReceiptStatus: async (id: number, status: number) => {
     return await request.put({
-      url: `/erp/finance-receipt/update-status`,
+      url: `/erp-finance/receipt/update-status`,
       params: {
         id,
         status
@@ -47,7 +47,7 @@ export const FinanceReceiptApi = {
   // 删除收款单
   deleteFinanceReceipt: async (ids: number[]) => {
     return await request.delete({
-      url: `/erp/finance-receipt/delete`,
+      url: `/erp-finance/receipt/delete`,
       params: {
         ids: ids.join(',')
       }
@@ -56,6 +56,6 @@ export const FinanceReceiptApi = {
 
   // 导出收款单 Excel
   exportFinanceReceipt: async (params: any) => {
-    return await request.download({ url: `/erp/finance-receipt/export-excel`, params })
+    return await request.download({ url: `/erp-finance/receipt/export-excel`, params })
   }
 }

@@ -17,16 +17,16 @@ export interface StockRecordVO {
 export const StockRecordApi = {
   // 查询产品库存明细分页
   getStockRecordPage: async (params: any) => {
-    return await request.get({ url: `/erp/stock-record/page`, params })
+    return await request.get({ url: `/erp-stock/record/page`, params })
   },
 
   // 查询产品库存明细详情
   getStockRecord: async (id: number) => {
-    return await request.get({ url: `/erp/stock-record/get?id=` + id })
+    return await request.get({ url: `/erp-stock/record/get?id=` + id })
   },
 
   // 导出产品库存明细 Excel
   exportStockRecord: async (params) => {
-    return await request.download({ url: `/erp/stock-record/export-excel`, params })
+    return await request.download({ url: `/erp-stock/record/export-excel`, params })
   }
 }

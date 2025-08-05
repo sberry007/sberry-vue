@@ -15,33 +15,33 @@ export interface AccountVO {
 export const AccountApi = {
   // 查询结算账户分页
   getAccountPage: async (params: any) => {
-    return await request.get({ url: `/erp/account/page`, params })
+    return await request.get({ url: `/erp-finance/account/page`, params })
   },
 
   // 查询结算账户精简列表
   getAccountSimpleList: async () => {
-    return await request.get({ url: `/erp/account/simple-list` })
+    return await request.get({ url: `/erp-finance/account/simple-list` })
   },
 
   // 查询结算账户详情
   getAccount: async (id: number) => {
-    return await request.get({ url: `/erp/account/get?id=` + id })
+    return await request.get({ url: `/erp-finance/account/get?id=` + id })
   },
 
   // 新增结算账户
   createAccount: async (data: AccountVO) => {
-    return await request.post({ url: `/erp/account/create`, data })
+    return await request.post({ url: `/erp-finance/account/create`, data })
   },
 
   // 修改结算账户
   updateAccount: async (data: AccountVO) => {
-    return await request.put({ url: `/erp/account/update`, data })
+    return await request.put({ url: `/erp-finance/account/update`, data })
   },
 
   // 修改结算账户默认状态
   updateAccountDefaultStatus: async (id: number, defaultStatus: boolean) => {
     return await request.put({
-      url: `/erp/account/update-default-status`,
+      url: `/erp-finance/account/update-default-status`,
       params: {
         id,
         defaultStatus
@@ -51,11 +51,11 @@ export const AccountApi = {
 
   // 删除结算账户
   deleteAccount: async (id: number) => {
-    return await request.delete({ url: `/erp/account/delete?id=` + id })
+    return await request.delete({ url: `/erp-finance/account/delete?id=` + id })
   },
 
   // 导出结算账户 Excel
   exportAccount: async (params: any) => {
-    return await request.download({ url: `/erp/account/export-excel`, params })
+    return await request.download({ url: `/erp-finance/account/export-excel`, params })
   }
 }

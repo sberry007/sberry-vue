@@ -18,11 +18,11 @@ export interface ErpSaleTimeSummaryRespVO {
 export const SaleStatisticsApi = {
   // 获得销售统计
   getSaleSummary: async (): Promise<ErpSaleSummaryRespVO> => {
-    return await request.get({ url: `/erp/sale-statistics/summary` })
+    return await request.get({ url: `/erp-sale/statistics/summary` })
   },
 
   // 获得销售时间段统计
   getSaleTimeSummary: async (): Promise<ErpSaleTimeSummaryRespVO[]> => {
-    return await request.get({ url: `/erp/sale-statistics/time-summary` })
+    return await request.get({ url: `/erp-sale/statistics/time-summary` })
   }
 }

@@ -15,28 +15,28 @@ export interface StockCheckVO {
 export const StockCheckApi = {
   // 查询库存盘点单分页
   getStockCheckPage: async (params: any) => {
-    return await request.get({ url: `/erp/stock-check/page`, params })
+    return await request.get({ url: `/erp-stock/check/page`, params })
   },
 
   // 查询库存盘点单详情
   getStockCheck: async (id: number) => {
-    return await request.get({ url: `/erp/stock-check/get?id=` + id })
+    return await request.get({ url: `/erp-stock/check/get?id=` + id })
   },
 
   // 新增库存盘点单
   createStockCheck: async (data: StockCheckVO) => {
-    return await request.post({ url: `/erp/stock-check/create`, data })
+    return await request.post({ url: `/erp-stock/check/create`, data })
   },
 
   // 修改库存盘点单
   updateStockCheck: async (data: StockCheckVO) => {
-    return await request.put({ url: `/erp/stock-check/update`, data })
+    return await request.put({ url: `/erp-stock/check/update`, data })
   },
 
   // 更新库存盘点单的状态
   updateStockCheckStatus: async (id: number, status: number) => {
     return await request.put({
-      url: `/erp/stock-check/update-status`,
+      url: `/erp-stock/check/update-status`,
       params: {
         id,
         status
@@ -47,7 +47,7 @@ export const StockCheckApi = {
   // 删除库存盘点单
   deleteStockCheck: async (ids: number[]) => {
     return await request.delete({
-      url: `/erp/stock-check/delete`,
+      url: `/erp-stock/check/delete`,
       params: {
         ids: ids.join(',')
       }
@@ -56,6 +56,6 @@ export const StockCheckApi = {
 
   // 导出库存盘点单 Excel
   exportStockCheck: async (params) => {
-    return await request.download({ url: `/erp/stock-check/export-excel`, params })
+    return await request.download({ url: `/erp-stock/check/export-excel`, params })
   }
 }

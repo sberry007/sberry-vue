@@ -18,28 +18,28 @@ export interface SaleOrderVO {
 export const SaleOrderApi = {
   // 查询销售订单分页
   getSaleOrderPage: async (params: any) => {
-    return await request.get({ url: `/erp/sale-order/page`, params })
+    return await request.get({ url: `/erp-sale/order/page`, params })
   },
 
   // 查询销售订单详情
   getSaleOrder: async (id: number) => {
-    return await request.get({ url: `/erp/sale-order/get?id=` + id })
+    return await request.get({ url: `/erp-sale/order/get?id=` + id })
   },
 
   // 新增销售订单
   createSaleOrder: async (data: SaleOrderVO) => {
-    return await request.post({ url: `/erp/sale-order/create`, data })
+    return await request.post({ url: `/erp-sale/order/create`, data })
   },
 
   // 修改销售订单
   updateSaleOrder: async (data: SaleOrderVO) => {
-    return await request.put({ url: `/erp/sale-order/update`, data })
+    return await request.put({ url: `/erp-sale/order/update`, data })
   },
 
   // 更新销售订单的状态
   updateSaleOrderStatus: async (id: number, status: number) => {
     return await request.put({
-      url: `/erp/sale-order/update-status`,
+      url: `/erp-sale/order/update-status`,
       params: {
         id,
         status
@@ -50,7 +50,7 @@ export const SaleOrderApi = {
   // 删除销售订单
   deleteSaleOrder: async (ids: number[]) => {
     return await request.delete({
-      url: `/erp/sale-order/delete`,
+      url: `/erp-sale/order/delete`,
       params: {
         ids: ids.join(',')
       }
@@ -59,6 +59,6 @@ export const SaleOrderApi = {
 
   // 导出销售订单 Excel
   exportSaleOrder: async (params: any) => {
-    return await request.download({ url: `/erp/sale-order/export-excel`, params })
+    return await request.download({ url: `/erp-sale/order/export-excel`, params })
   }
 }

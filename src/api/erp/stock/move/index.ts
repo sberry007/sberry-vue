@@ -15,28 +15,28 @@ export interface StockMoveVO {
 export const StockMoveApi = {
   // 查询库存调度单分页
   getStockMovePage: async (params: any) => {
-    return await request.get({ url: `/erp/stock-move/page`, params })
+    return await request.get({ url: `/erp-stock/move/page`, params })
   },
 
   // 查询库存调度单详情
   getStockMove: async (id: number) => {
-    return await request.get({ url: `/erp/stock-move/get?id=` + id })
+    return await request.get({ url: `/erp-stock/move/get?id=` + id })
   },
 
   // 新增库存调度单
   createStockMove: async (data: StockMoveVO) => {
-    return await request.post({ url: `/erp/stock-move/create`, data })
+    return await request.post({ url: `/erp-stock/move/create`, data })
   },
 
   // 修改库存调度单
   updateStockMove: async (data: StockMoveVO) => {
-    return await request.put({ url: `/erp/stock-move/update`, data })
+    return await request.put({ url: `/erp-stock/move/update`, data })
   },
 
   // 更新库存调度单的状态
   updateStockMoveStatus: async (id: number, status: number) => {
     return await request.put({
-      url: `/erp/stock-move/update-status`,
+      url: `/erp-stock/move/update-status`,
       params: {
         id,
         status
@@ -47,7 +47,7 @@ export const StockMoveApi = {
   // 删除库存调度单
   deleteStockMove: async (ids: number[]) => {
     return await request.delete({
-      url: `/erp/stock-move/delete`,
+      url: `/erp-stock/move/delete`,
       params: {
         ids: ids.join(',')
       }
@@ -56,6 +56,6 @@ export const StockMoveApi = {
 
   // 导出库存调度单 Excel
   exportStockMove: async (params) => {
-    return await request.download({ url: `/erp/stock-move/export-excel`, params })
+    return await request.download({ url: `/erp-stock/move/export-excel`, params })
   }
 }

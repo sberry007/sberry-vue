@@ -16,28 +16,28 @@ export interface StockOutVO {
 export const StockOutApi = {
   // 查询其它出库单分页
   getStockOutPage: async (params: any) => {
-    return await request.get({ url: `/erp/stock-out/page`, params })
+    return await request.get({ url: `/erp-stock/out/page`, params })
   },
 
   // 查询其它出库单详情
   getStockOut: async (id: number) => {
-    return await request.get({ url: `/erp/stock-out/get?id=` + id })
+    return await request.get({ url: `/erp-stock/out/get?id=` + id })
   },
 
   // 新增其它出库单
   createStockOut: async (data: StockOutVO) => {
-    return await request.post({ url: `/erp/stock-out/create`, data })
+    return await request.post({ url: `/erp-stock/out/create`, data })
   },
 
   // 修改其它出库单
   updateStockOut: async (data: StockOutVO) => {
-    return await request.put({ url: `/erp/stock-out/update`, data })
+    return await request.put({ url: `/erp-stock/out/update`, data })
   },
 
   // 更新其它出库单的状态
   updateStockOutStatus: async (id: number, status: number) => {
     return await request.put({
-      url: `/erp/stock-out/update-status`,
+      url: `/erp-stock/out/update-status`,
       params: {
         id,
         status
@@ -48,7 +48,7 @@ export const StockOutApi = {
   // 删除其它出库单
   deleteStockOut: async (ids: number[]) => {
     return await request.delete({
-      url: `/erp/stock-out/delete`,
+      url: `/erp-stock/out/delete`,
       params: {
         ids: ids.join(',')
       }
@@ -57,6 +57,6 @@ export const StockOutApi = {
 
   // 导出其它出库单 Excel
   exportStockOut: async (params) => {
-    return await request.download({ url: `/erp/stock-out/export-excel`, params })
+    return await request.download({ url: `/erp-stock/out/export-excel`, params })
   }
 }
