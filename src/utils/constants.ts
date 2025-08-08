@@ -50,17 +50,29 @@ export const SystemDataScopeEnum = {
  * 用户的社交平台的类型枚举
  */
 export const SystemUserSocialTypeEnum = {
-  DINGTALK: {
-    title: '钉钉',
-    type: 20,
-    source: 'dingtalk',
-    img: 'https://s1.ax1x.com/2022/05/22/OzMDRs.png'
+  // DINGTALK: {
+  //   title: '钉钉',
+  //   type: 20,
+  //   source: 'dingtalk',
+  //   img: new URL('@/assets/svgs/social/dingtalk.svg', import.meta.url).href
+  // },
+  // WECHAT_ENTERPRISE: {
+  //   title: '企业微信',
+  //   type: 30,
+  //   source: 'wechat_enterprise',
+  //   img: new URL('@/assets/svgs/social/wechat.svg', import.meta.url).href
+  // },
+  GITHUB: {
+    title: 'GitHub',
+    type:35,
+    source: 'github',
+    img: new URL('@/assets/svgs/social/github.svg', import.meta.url).href
   },
-  WECHAT_ENTERPRISE: {
-    title: '企业微信',
-    type: 30,
-    source: 'wechat_enterprise',
-    img: 'https://s1.ax1x.com/2022/05/22/OzMrzn.png'
+  GOOGLE:{
+    title: 'Google',
+    type:36,
+    source: 'google',
+    img: new URL('@/assets/svgs/social/google.svg', import.meta.url).href
   }
 }
 

@@ -92,21 +92,16 @@
       <el-col :span="24" class="px-10px">
         <el-form-item>
           <el-row :gutter="5" justify="space-between" style="width: 100%">
-            <el-col :span="8">
+            <!--手机登录-->
+            <el-col :span="12">
               <XButton
                 :title="t('login.btnMobile')"
                 class="w-full"
                 @click="setLoginState(LoginStateEnum.MOBILE)"
               />
             </el-col>
-            <el-col :span="8">
-              <XButton
-                :title="t('login.btnQRCode')"
-                class="w-full"
-                @click="setLoginState(LoginStateEnum.QR_CODE)"
-              />
-            </el-col>
-            <el-col :span="8">
+            <!--注册-->
+            <el-col :span="12">
               <XButton
                 :title="t('login.btnRegister')"
                 class="w-full"
@@ -117,6 +112,7 @@
         </el-form-item>
       </el-col>
       <el-divider content-position="center">{{ t('login.otherLogin') }}</el-divider>
+      <!--第三方登录-->
       <el-col :span="24" class="px-10px">
         <el-form-item>
           <div class="w-full flex justify-between">
@@ -129,21 +125,6 @@
               color="#999"
               @click="doSocialLogin(item.type)"
             />
-          </div>
-        </el-form-item>
-      </el-col>
-      <el-divider content-position="center">萌新必读</el-divider>
-      <el-col :span="24" class="px-10px">
-        <el-form-item>
-          <div class="w-full flex justify-between">
-            <el-link href="https://doc.iocoder.cn/" target="_blank">📚开发指南</el-link>
-            <el-link href="https://doc.iocoder.cn/video/" target="_blank">🔥视频教程</el-link>
-            <el-link href="https://www.iocoder.cn/Interview/good-collection/" target="_blank">
-              ⚡面试手册
-            </el-link>
-            <el-link href="http://static.yudao.iocoder.cn/mp/Aix9975.jpeg" target="_blank">
-              🤝外包咨询
-            </el-link>
           </div>
         </el-form-item>
       </el-col>
@@ -200,10 +181,8 @@ const loginData = reactive({
 })
 
 const socialList = [
-  { icon: 'ant-design:wechat-filled', type: 30 },
-  { icon: 'ant-design:dingtalk-circle-filled', type: 20 },
-  { icon: 'ant-design:github-filled', type: 0 },
-  { icon: 'ant-design:alipay-circle-filled', type: 0 }
+  { icon: 'logos:github-icon', type: 35 },
+  { icon: 'logos:google-icon', type: 36 }
 ]
 
 // 获取验证码

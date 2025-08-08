@@ -13,12 +13,15 @@
       <div>
         <el-tabs v-model="activeName" class="profile-tabs" style="height: 400px" tab-position="top">
           <el-tab-pane :label="t('profile.info.basicInfo')" name="basicInfo">
+          <!--基本信息模块-->
             <BasicInfo @success="handleBasicInfoSuccess" />
           </el-tab-pane>
           <el-tab-pane :label="t('profile.info.resetPwd')" name="resetPwd">
+            <!--重置密码模块-->
             <ResetPwd />
           </el-tab-pane>
           <el-tab-pane :label="t('profile.info.userSocial')" name="userSocial">
+            <!--用户社交绑定模块-->
             <UserSocial v-model:activeName="activeName" />
           </el-tab-pane>
         </el-tabs>
