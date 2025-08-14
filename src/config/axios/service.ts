@@ -178,6 +178,26 @@ service.interceptors.response.use(
       })
       return Promise.reject(new Error(msg))
     } else if (code !== 200) {
+      // 如果后端返回用户或租户被禁用等业务错误码，则直接登出并跳转登录页（不弹窗）
+      const disabledCodes = [1002003006, 1002015001, 1002015002,1002000001]
+      
+      if (disabledCodes.includes(Number(code))) {
+        // 先给用户提示，再清理并跳转到登录页（若当前已在登录页则只清理不跳转）
+        ElMessage({ message: msg, type: 'error', duration: 3000 })
+        setTimeout(() => {
+          resetRouter()
+          deleteUserCache()
+          removeToken()
+          const path = window.location.pathname || ''
+          const hash = window.location.hash || ''
+          const isLogin = path === '/login' || path === '/login/' || hash.startsWith('#/login')
+          if (!isLogin) {
+            window.location.href = '/login'
+          }
+        }, 1500)
+        return Promise.reject(msg)
+      }
+
       if (msg === '无效的刷新令牌') {
         // hard coding：忽略这个提示，直接登出
         console.log(msg)
