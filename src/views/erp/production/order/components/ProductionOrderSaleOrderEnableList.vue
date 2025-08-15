@@ -16,6 +16,23 @@
         :inline="true"
         label-width="68px"
       >
+        <el-form-item label="客户" prop="customerId">
+          <el-select
+            v-model="queryParams.customerId"
+            placeholder="请选择客户"
+            clearable
+            filterable
+            @change="handleQuery"
+            class="!w-160px"
+          >
+            <el-option
+              v-for="item in customerList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="订单单号" prop="no">
           <el-input
             v-model="queryParams.no"
@@ -130,6 +147,7 @@ import { SaleOrderVO } from '@/api/erp/sale/order'
 import { dateFormatter2 } from '@/utils/formatTime'
 import { erpCountTableColumnFormatter, erpPriceTableColumnFormatter } from '@/utils'
 import { ProductApi, ProductVO } from '@/api/erp/product/product'
+import { CustomerApi, CustomerVO } from '@/api/erp/sale/customer'
 
 defineOptions({ name: 'ProductionOrderSaleOrderEnableList' })
 
@@ -148,6 +166,7 @@ const queryParams = reactive({
 })
 const queryFormRef = ref() // 搜索的表单
 const productList = ref<ProductVO[]>([]) // 产品列表
+const customerList = ref<CustomerVO[]>([]) // 客户列表
 
 /** 选中行 */
 const currentRowValue = ref(undefined) // 选中行的 value
@@ -157,17 +176,21 @@ const handleCurrentChange = (row) => {
 }
 
 /** 打开弹窗 */
-const open = async (customerId) => {
+const open = async () => {
   dialogVisible.value = true
   await nextTick() // 等待，避免 queryFormRef 为空
-  console.log('打开弹窗,customerId:', customerId)
-  // 设置客户ID
-  queryParams.customerId = customerId
-  console.log('打开弹窗,queryParams.customerId:', queryParams.customerId)
-  // 加载可生产的订单列表
-  await resetQuery()
-  // 加载产品列表
+  console.log('打开弹窗')
+  // 重置所有查询参数
+  queryParams.customerId = undefined
+  queryParams.no = undefined
+  queryParams.productId = undefined
+  queryParams.orderTime = []
+  queryParams.pageNo = 1
+  // 先加载产品列表和客户列表
   productList.value = await ProductApi.getProductSimpleList()
+  customerList.value = await CustomerApi.getCustomerSimpleList()
+  // 然后加载可生产的订单列表
+  await getList()
 }
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 
@@ -193,6 +216,11 @@ const handleQuery = () => {
 /** 重置查询 */
 const resetQuery = () => {
   queryFormRef.value?.resetFields()
+  // 手动重置所有查询参数
+  queryParams.customerId = undefined
+  queryParams.no = undefined
+  queryParams.productId = undefined
+  queryParams.orderTime = []
   queryParams.pageNo = 1
   getList()
 }
@@ -203,13 +231,13 @@ const getList = async () => {
   try {
     // 根据选择的productId获取产品名称
     let productName = undefined
-    if (queryParams.productId) {
+    if (queryParams.productId && productList.value && productList.value.length > 0) {
       const selectedProduct = productList.value.find(p => p.id === queryParams.productId)
       productName = selectedProduct?.name
     }
     
     const data = await EprProductionOrderApi.getProductionEnableSaleOrders({
-      customerId: Number(queryParams.customerId),
+      customerId: queryParams.customerId ? Number(queryParams.customerId) : undefined,
       orderNo: queryParams.no,
       productName: productName
     })

@@ -15,31 +15,13 @@
             <el-input disabled v-model="formData.orderNo" placeholder="保存时自动生成" />
           </el-form-item>
         </el-col>
-        <!-- 客户下拉框 - 只在创建模式下显示 -->
-        <el-col :span="8" v-if="formType === 'create'">
-          <el-form-item label="客户" prop="customerId">
-            <el-select
-              v-model="formData.customerId"
-              placeholder="请选择客户"
-              clearable
-              filterable
-              @change="handleCustomerChange"
-            >
-              <el-option
-                v-for="item in customerList"
-                :key="item.id"
-                :label="item.name"
-                :value="item.id"
-              />
-            </el-select>
-          </el-form-item>
-        </el-col>
+
         <!-- 关联销售订单 -->
         <el-col :span="8">
           <el-form-item label="关联订单" prop="saleOrderNo">
             <el-input v-model="formData.saleOrderNo" readonly>
               <template #append v-if="formType !== 'detail'">
-                <el-button @click="openSaleOrderEnableList" :disabled="!formData.customerId">
+                <el-button @click="openSaleOrderEnableList">
                   <Icon icon="ep:search" /> 选择
                 </el-button>
               </template>
@@ -205,7 +187,7 @@ const formRules = reactive({
   plannedStartDate: [{ required: true, message: '计划开始日期不能为空', trigger: 'blur' }],
   plannedEndDate: [{ required: true, message: '计划结束日期不能为空', trigger: 'blur' }],
   warehouseId: [{ required: true, message: '仓库ID，不能为空', trigger: 'blur' }],
-  status: [{ required: true, message: '订单状态（进行中、完成、取消）不能为空', trigger: 'blur' }]
+  // status: [{ required: true, message: '订单状态（进行中、完成、取消）不能为空', trigger: 'blur' }]
 })
 const formRef = ref() // 表单 Ref
 
@@ -352,23 +334,11 @@ const loadCustomerList = async () => {
   }
 }
 
-/** 客户切换时，清空销售订单相关信息 */
-const handleCustomerChange = async () => {
-  formData.value.saleOrderId = undefined // 切换客户时清空已选销售订单
-  formData.value.saleOrderNo = undefined // 清空销售订单编号
-  formData.value.productId = undefined // 清空产品
-  formData.value.plannedQuantity = undefined // 清空计划数量
-}
-
 /** 打开【可生产的销售订单列表】弹窗 */
 const saleOrderEnableListRef = ref() // 可生产的销售订单列表 Ref
 const openSaleOrderEnableList = () => {
-  if (!formData.value.customerId) {
-    message.warning('请先选择客户')
-    return
-  }
-  console.log('打开可生产的销售订单列表，客户ID:', formData.value.customerId)
-  saleOrderEnableListRef.value.open(formData.value.customerId)
+  console.log('打开可生产的销售订单列表')
+  saleOrderEnableListRef.value.open()
 }
 
 /** 处理销售订单选择 */

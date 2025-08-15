@@ -136,41 +136,6 @@
           </el-form-item>
         </template>
       </el-table-column>
-<!--      <el-table-column label="金额" prop="totalProductPrice" min-width="100">-->
-<!--        <template #default="{ row }">-->
-<!--          <el-form-item class="mb-0px!">-->
-<!--            <el-input disabled v-model="row.totalProductPrice" :formatter="erpPriceInputFormatter" />-->
-<!--          </el-form-item>-->
-<!--        </template>-->
-<!--      </el-table-column>-->
-<!--      <el-table-column label="税率（%）" min-width="115">-->
-<!--        <template #default="{ row }">-->
-<!--          <el-form-item class="mb-0px!">-->
-<!--            <el-input disabled v-model="row.taxPercent" :formatter="erpPriceInputFormatter" />-->
-<!--          </el-form-item>-->
-<!--        </template>-->
-<!--      </el-table-column>-->
-<!--      <el-table-column label="税额" prop="taxPrice" min-width="120">-->
-<!--        <template #default="{ row }">-->
-<!--          <el-form-item class="mb-0px!">-->
-<!--            <el-input disabled v-model="row.taxPrice" :formatter="erpPriceInputFormatter" />-->
-<!--          </el-form-item>-->
-<!--        </template>-->
-<!--      </el-table-column>-->
-<!--      <el-table-column label="税额合计" prop="totalPrice" min-width="100">-->
-<!--        <template #default="{ row }">-->
-<!--          <el-form-item class="mb-0px!">-->
-<!--            <el-input disabled v-model="row.totalPrice" :formatter="erpPriceInputFormatter" />-->
-<!--          </el-form-item>-->
-<!--        </template>-->
-<!--      </el-table-column>-->
-<!--      <el-table-column label="备注" min-width="150">-->
-<!--        <template #default="{ row }">-->
-<!--          <el-form-item class="mb-0px!">-->
-<!--            <el-input disabled v-model="row.remark" />-->
-<!--          </el-form-item>-->
-<!--        </template>-->
-<!--      </el-table-column>-->
     </el-table>
   </el-form>
 </template>

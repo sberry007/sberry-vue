@@ -34,7 +34,6 @@
         </el-select>
       </el-form-item>
 
-
       <el-form-item label="仓库" prop="warehouseId">
         <el-select
           v-model="queryParams.warehouseId"
@@ -68,7 +67,6 @@
           </el-option>
         </el-select>
       </el-form-item>
-
 
       <el-form-item label="备注" prop="remark">
         <el-input
@@ -147,11 +145,11 @@
       <el-table-column label="仓库" align="center" prop="warehouseName" width="180" />
       <el-table-column label="优先级" align="center" prop="priority">
         <template #default="scope">
-<!--          <span v-if="scope.row.priority === 0">低</span>-->
-<!--          <span v-else-if="scope.row.priority === 1">普通</span>-->
-<!--          <span v-else-if="scope.row.priority === 2">高</span>-->
-<!--          <span v-else-if="scope.row.priority === 3">紧急</span>-->
-<!--          <span v-else>{{ scope.row.priority }}</span>-->
+          <!--          <span v-if="scope.row.priority === 0">低</span>-->
+          <!--          <span v-else-if="scope.row.priority === 1">普通</span>-->
+          <!--          <span v-else-if="scope.row.priority === 2">高</span>-->
+          <!--          <span v-else-if="scope.row.priority === 3">紧急</span>-->
+          <!--          <span v-else>{{ scope.row.priority }}</span>-->
           <dict-tag :type="DICT_TYPE.ERP_PRODUCTION_ORDER_PRIORITY" :value="scope.row.priority" />
         </template>
       </el-table-column>
@@ -182,14 +180,14 @@
             type="primary"
             @click="openForm('update', scope.row.id)"
             v-hasPermi="['erp-production:epr-production-order:update']"
-            :disabled="scope.row.status === 20"
+            :disabled="scope.row.status === 2"
           >
             编辑
           </el-button>
           <el-button
             link
             type="primary"
-            @click="handleUpdateStatus(scope.row.id, 20)"
+            @click="handleUpdateStatus(scope.row.id, 2)"
             v-hasPermi="['erp-production:epr-production-order:update-status']"
             v-if="scope.row.status === 1"
           >
@@ -198,7 +196,7 @@
           <el-button
             link
             type="danger"
-            @click="handleUpdateStatus(scope.row.id, 10)"
+            @click="handleUpdateStatus(scope.row.id, 1)"
             v-hasPermi="['erp-production:epr-production-order:update-status']"
             v-if="scope.row.status === 2"
           >
@@ -207,7 +205,7 @@
           <el-button
             link
             type="danger"
-            @click="handleDelete([scope.row.id])"
+            @click="handleDelete(scope.row.id)"
             v-hasPermi="['erp-production:epr-production-order:delete']"
           >
             删除
@@ -265,7 +263,7 @@ const queryParams = reactive({
 })
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
-const statusOptions = ref<Array<{ value: string, label: string }>>([]) // 订单状态选项
+const statusOptions = ref<Array<{ value: string; label: string }>>([]) // 订单状态选项
 
 /** 初始化 **/
 onMounted(async () => {
@@ -277,7 +275,6 @@ onMounted(async () => {
   // 加载仓库
   warehouseList.value = await WarehouseApi.getWarehouseSimpleList()
 })
-
 
 /** 查询列表 */
 const getList = async () => {
@@ -319,8 +316,7 @@ const handleDelete = async (id: number) => {
     message.success(t('common.delSuccess'))
     // 刷新列表
     await getList()
-  } catch {
-  }
+  } catch {}
 }
 
 /** 导出按钮操作 */
@@ -358,7 +354,7 @@ const loadStatusOptions = async () => {
     const res = await getDictListByType(DICT_TYPE.ERP_PRODUCTION_ORDER_STATUS)
 
     // 从 res 中获取字典数据
-    statusOptions.value = res.map(item => ({
+    statusOptions.value = res.map((item) => ({
       value: item.value,
       label: item.label
     }))
