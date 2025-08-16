@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 
-import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import qs from 'qs'
 import { config } from '@/config/axios/config'
 import {
@@ -13,11 +13,20 @@ import {
 } from '@/utils/auth'
 import errorCode from './errorCode'
 
-import { resetRouter } from '@/router'
+import router, { resetRouter } from '@/router'
 import { deleteUserCache } from '@/hooks/web/useCache'
+import { useMessage } from '@/hooks/web/useMessage'
+import { useI18n } from '@/hooks/web/useI18n'
+
+const message = useMessage()
 
 const tenantEnable = import.meta.env.VITE_APP_TENANT_ENABLE
 const { result_code, base_url, request_timeout } = config
+
+// 并发请求下的强制下线去重守卫（仅在当前页面会话有效，页面刷新后重置）
+const forceLogoutGuard = { firing: false }
+// 用户/租户被禁用等需要强制下线的业务错误码（集中定义，便于维护）
+const DISABLED_USER_CODES = [1002003006, 1002015001, 1002015002, 1002000001]
 
 // 需要忽略的提示。忽略后，自动 Promise.reject('error')
 const ignoreMsgs = [
@@ -98,7 +107,7 @@ service.interceptors.response.use(
     let { data } = response
     const config = response.config
     if (!data) {
-      // 返回“[HTTP]请求没有返回值”;
+      // 返回“[HTTP]请求没有返回值”；
       throw new Error()
     }
     const { t } = useI18n()
@@ -114,7 +123,7 @@ service.interceptors.response.use(
       }
       data = await new Response(response.data).json()
     }
-    const code = data.code || result_code
+    const code = data.code ?? result_code
     // 获取错误信息
     const msg = data.msg || errorCode[code] || errorCode['default']
     if (ignoreMsgs.indexOf(msg) !== -1) {
@@ -161,40 +170,46 @@ service.interceptors.response.use(
         })
       }
     } else if (code === 500) {
-      ElMessage.error(t('sys.api.errMsg500'))
+      message.error(t('sys.api.errMsg500'))
       return Promise.reject(new Error(msg))
     } else if (code === 901) {
-      ElMessage.error({
-        offset: 300,
-        dangerouslyUseHTMLString: true,
-        message:
-          '<div>' +
-          t('sys.api.errMsg901') +
-          '</div>' +
-          '<div> &nbsp; </div>' +
-          '<div>参考 https://doc.iocoder.cn/ 教程</div>' +
-          '<div> &nbsp; </div>' +
-          '<div>5 分钟搭建本地环境</div>'
-      })
+      message.error(
+        `${t('sys.api.errMsg901')} 参考 https://doc.sberry.cloud/ 教程，5 分钟搭建本地环境`
+      )
       return Promise.reject(new Error(msg))
-    } else if (code !== 200) {
-      // 如果后端返回用户或租户被禁用等业务错误码，则直接登出并跳转登录页（不弹窗）
-      const disabledCodes = [1002003006, 1002015001, 1002015002,1002000001]
-      
-      if (disabledCodes.includes(Number(code))) {
-        // 先给用户提示，再清理并跳转到登录页（若当前已在登录页则只清理不跳转）
-        ElMessage({ message: msg, type: 'error', duration: 3000 })
-        setTimeout(() => {
-          resetRouter()
-          deleteUserCache()
-          removeToken()
-          const path = window.location.pathname || ''
-          const hash = window.location.hash || ''
-          const isLogin = path === '/login' || path === '/login/' || hash.startsWith('#/login')
-          if (!isLogin) {
-            window.location.href = '/login'
-          }
-        }, 1500)
+    } else if (code !== 0) {
+      // 如果后端返回用户或租户被禁用等业务错误码，则直接登出并跳转登录页（非阻塞提示 + 跳转去重）
+      if (DISABLED_USER_CODES.includes(Number(code))) {
+        // 已经在处理强制下线，后续并发响应直接忽略，避免重复弹窗/跳转
+        if (forceLogoutGuard.firing) {
+          return Promise.reject(msg)
+        }
+        forceLogoutGuard.firing = true
+        
+        // 计算当前是否已在登录页
+        const path = window.location.pathname || ''
+        const hash = window.location.hash || ''
+        const isLogin = path === '/login' || path === '/login/' || hash.startsWith('#/login')
+        
+        // 任何页面都显示提示框
+        try {
+          await message.alertError(msg)
+        } catch {
+          // 用户关闭提示框也视为确认
+        }
+        
+        // 执行清理操作
+        try { resetRouter() } catch {}
+        try { deleteUserCache() } catch {}
+        try { removeToken() } catch {}
+        
+        // 只有非登录页才跳转到首页（避免重新登录后出现404问题）
+        if (!isLogin) {
+          router.replace('/')
+        }
+
+        // 重置守卫状态
+        forceLogoutGuard.firing = false
         return Promise.reject(msg)
       }
 
@@ -203,7 +218,7 @@ service.interceptors.response.use(
         console.log(msg)
         return handleAuthorized()
       } else {
-        ElNotification.error({ title: msg })
+        message.error(msg)
       }
       return Promise.reject('error')
     } else {
@@ -212,16 +227,16 @@ service.interceptors.response.use(
   },
   (error: AxiosError) => {
     console.log('err' + error) // for debug
-    let { message } = error
+    let { message: errMsg } = error
     const { t } = useI18n()
-    if (message === 'Network Error') {
-      message = t('sys.api.errorMessage')
-    } else if (message.includes('timeout')) {
-      message = t('sys.api.apiTimeoutMessage')
-    } else if (message.includes('Request failed with status code')) {
-      message = t('sys.api.apiRequestFailed') + message.substr(message.length - 3)
+    if (errMsg === 'Network Error') {
+      errMsg = t('sys.api.errorMessage')
+    } else if (errMsg.includes('timeout')) {
+      errMsg = t('sys.api.apiTimeoutMessage')
+    } else if (errMsg.includes('Request failed with status code')) {
+      errMsg = t('sys.api.apiRequestFailed') + errMsg.substr(errMsg.length - 3)
     }
-    ElMessage.error(message)
+    message.error(errMsg)
     return Promise.reject(error)
   }
 )

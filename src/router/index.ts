@@ -2,6 +2,7 @@ import type { App } from 'vue'
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
 import remainingRouter from './modules/remaining'
+import { usePermissionStoreWithOut } from '@/store/modules/permission'
 
 // 创建路由实例
 const router = createRouter({
@@ -19,6 +20,10 @@ export const resetRouter = (): void => {
       router.hasRoute(name) && router.removeRoute(name)
     }
   })
+  // 清理permission store中的动态路由缓存，确保重新登录时能正确重新生成路由
+  const permissionStore = usePermissionStoreWithOut()
+  permissionStore.addRouters = []
+  permissionStore.routers = []
 }
 
 export const setupRouter = (app: App<Element>) => {

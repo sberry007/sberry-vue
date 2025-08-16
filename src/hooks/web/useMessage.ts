@@ -21,19 +21,19 @@ export const useMessage = () => {
     },
     // 弹出提示
     alert(content: string) {
-      ElMessageBox.alert(content, t('common.confirmTitle'))
+      ElMessageBox.alert(content, t('提示'))
     },
     // 错误提示
     alertError(content: string) {
-      ElMessageBox.alert(content, t('common.confirmTitle'), { type: 'error' })
+      ElMessageBox.alert(content, t('提示'), { type: 'error' })
     },
     // 成功提示
     alertSuccess(content: string) {
-      ElMessageBox.alert(content, t('common.confirmTitle'), { type: 'success' })
+      ElMessageBox.alert(content, t('提示'), { type: 'success' })
     },
     // 警告提示
     alertWarning(content: string) {
-      ElMessageBox.alert(content, t('common.confirmTitle'), { type: 'warning' })
+      ElMessageBox.alert(content, t('提示'), { type: 'warning' })
     },
     // 通知提示
     notify(content: string) {
@@ -53,7 +53,7 @@ export const useMessage = () => {
     },
     // 确认窗体
     confirm(content: string, tip?: string) {
-      return ElMessageBox.confirm(content, tip ? tip : t('common.confirmTitle'), {
+      return ElMessageBox.confirm(content, tip ? tip : t('提示'), {
         confirmButtonText: t('common.ok'),
         cancelButtonText: t('common.cancel'),
         type: 'warning'
@@ -63,7 +63,7 @@ export const useMessage = () => {
     delConfirm(content?: string, tip?: string) {
       return ElMessageBox.confirm(
         content ? content : t('common.delMessage'),
-        tip ? tip : t('common.confirmTitle'),
+        tip ? tip : t('提示'),
         {
           confirmButtonText: t('common.ok'),
           cancelButtonText: t('common.cancel'),
@@ -75,7 +75,7 @@ export const useMessage = () => {
     exportConfirm(content?: string, tip?: string) {
       return ElMessageBox.confirm(
         content ? content : t('common.exportMessage'),
-        tip ? tip : t('common.confirmTitle'),
+        tip ? tip : t('提示'),
         {
           confirmButtonText: t('common.ok'),
           cancelButtonText: t('common.cancel'),
