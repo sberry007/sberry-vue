@@ -199,7 +199,9 @@ service.interceptors.response.use(
         }
         
         // 执行清理操作
+        console.log('[DEBUG] 开始重置路由，当前路由数量:', router.getRoutes().length)
         try { resetRouter() } catch {}
+        console.log('[DEBUG] 路由重置完成，当前路由数量:', router.getRoutes().length)
         try { deleteUserCache() } catch {}
         try { removeToken() } catch {}
         
