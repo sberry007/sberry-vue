@@ -3,6 +3,7 @@ import request from '@/config/axios'
 // ERP 产品分类 VO
 export interface ProductCategoryVO {
   id: number // 分类编号
+  level: number // 分类层级
   parentId: number // 父分类编号
   name: string // 分类名称
   code: string // 分类编码
@@ -13,8 +14,8 @@ export interface ProductCategoryVO {
 // ERP 产品分类 API
 export const ProductCategoryApi = {
   // 查询产品分类列表
-  getProductCategoryList: async () => {
-    return await request.get({ url: `/erp-product/category/list` })
+  getProductCategoryList: async (params: any) => {
+    return await request.get({ url: `/erp-product/category/list`,params })
   },
 
   // 查询产品分类精简列表
@@ -23,8 +24,18 @@ export const ProductCategoryApi = {
   },
 
   // 查询产品分类详情
-  getProductCategory: async (id: number) => {
+  getProductCategory: async (id?: number) => {
     return await request.get({ url: `/erp-product/category/get?id=` + id })
+  },
+
+  // 根据分类层级查询分类数据
+  getProductCategoryListByLevel: async (level: number) => {
+    return await request.get({ url: `/erp-product/category/list/level?level=${level - 1}` })
+  },
+
+  // 根据产品类型查询分类列表
+  getProductCategoryListByProductType: async (productType?:string) => {
+    return await request.get({ url: `/erp-product/category/list/productType?productType=${productType}` })
   },
 
   // 新增产品分类

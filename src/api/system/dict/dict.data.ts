@@ -33,6 +33,11 @@ export const getDictDataByType = (dictType: string) => {
   return request.get({ url: '/system/dict-data/type?type=' + dictType })
 }
 
+// 根据字典类型查询字典数据
+export const getDictDataByDictType = (dictType: string) => {
+  return request.get({ url: '/system/dict-data/dictType?type=' + dictType })
+}
+
 // 新增字典数据
 export const createDictData = (data: DictDataVO) => {
   return request.post({ url: '/system/dict-data/create', data })
