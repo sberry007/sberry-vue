@@ -1,6 +1,4 @@
 <template>
-  <doc-alert title="【产品】产品信息、分类、单位" url="https://doc.iocoder.cn/erp/product/" />
-
   <ContentWrap>
     <!-- 搜索工作栏 -->
     <el-form
@@ -10,7 +8,7 @@
       :inline="true"
       label-width="68px"
     >
-      <el-form-item label="分类名称" prop="name">
+      <el-form-item label="分类名称" prop="name" label-width="80">
         <el-input
           v-model="queryParams.name"
           placeholder="请输入分类名称"
@@ -19,7 +17,7 @@
           class="!w-240px"
         />
       </el-form-item>
-      <el-form-item label="开启状态" prop="status">
+      <el-form-item label="开启状态" prop="status" label-width="80">
         <el-select
           v-model="queryParams.status"
           placeholder="请选择开启状态"
@@ -72,10 +70,15 @@
       :default-expand-all="isExpandAll"
       v-if="refreshTable"
     >
-      <el-table-column label="编码" align="center" prop="code" />
-      <el-table-column label="名称" align="center" prop="name" />
-      <el-table-column label="排序" align="center" prop="sort" />
-      <el-table-column label="状态" align="center" prop="status">
+      <el-table-column label="编码" prop="code" />
+      <el-table-column label="名称" align="center" prop="name" width="180"/>
+      <el-table-column label="类型" align="center" prop="productType" width="140">
+        <template #default="scope">
+          <dict-tag :type="DICT_TYPE.ERP_PRODUCT_TYPE" :value="scope.row.productType" />
+        </template>
+      </el-table-column>
+      <el-table-column label="排序" align="center" prop="sort" width="140"/>
+      <el-table-column label="状态" align="center" prop="status" width="140">
         <template #default="scope">
           <dict-tag :type="DICT_TYPE.COMMON_STATUS" :value="scope.row.status" />
         </template>
@@ -85,9 +88,9 @@
         align="center"
         prop="createTime"
         :formatter="dateFormatter"
-        width="180px"
+        width="220px"
       />
-      <el-table-column label="操作" align="center">
+      <el-table-column label="操作" align="center" width="180">
         <template #default="scope">
           <el-button
             link
@@ -109,12 +112,12 @@
       </el-table-column>
     </el-table>
     <!-- 分页 -->
-    <Pagination
-      :total="total"
-      v-model:page="queryParams.pageNo"
-      v-model:limit="queryParams.pageSize"
-      @pagination="getList"
-    />
+<!--    <Pagination-->
+<!--      :total="total"-->
+<!--      v-model:page="queryParams.pageNo"-->
+<!--      v-model:limit="queryParams.pageSize"-->
+<!--      @pagination="getList"-->
+<!--    />-->
   </ContentWrap>
 
   <!-- 表单弹窗：添加/修改 -->

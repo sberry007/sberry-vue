@@ -1,6 +1,6 @@
 <!-- ERP 产品的新增/修改 -->
 <template>
-  <Dialog :title="dialogTitle" v-model="dialogVisible">
+  <Dialog :title="dialogTitle" v-model="dialogVisible" width="900px">
     <el-form
       ref="formRef"
       :model="formData"
@@ -8,30 +8,51 @@
       label-width="100px"
       v-loading="formLoading"
     >
-      <el-row :gutter="20">
+      <el-row :gutter="15">
+        <el-col :span="12">
+          <el-form-item label="条码" prop="barCode">
+            <el-input v-model="formData.barCode" placeholder="保存时自动生成" disabled/>
+          </el-form-item>
+        </el-col>
         <el-col :span="12">
           <el-form-item label="名称" prop="name">
             <el-input v-model="formData.name" placeholder="请输入名称" />
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="条码" prop="barCode">
-            <el-input v-model="formData.barCode" placeholder="请输入条码" />
+          <el-form-item label="类型" prop="productType">
+            <el-select
+              v-model="formData.productType"
+              placeholder="请选择产品类型"
+              clearable class="w-1/1"
+              @change="getProductCategoryListByProductType(formData.productType)"
+            >
+              <el-option
+                v-for="dict in getStrDictOptions(DICT_TYPE.ERP_PRODUCT_TYPE)"
+                :key="dict.value"
+                :label="dict.label"
+                :value="dict.value"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="12">
           <el-form-item label="分类" prop="categoryId">
             <el-tree-select
+              :disabled="categoryList.length == 0"
               v-model="formData.categoryId"
               :data="categoryList"
               :props="defaultProps"
               check-strictly
+              filterable
               default-expand-all
-              placeholder="请选择分类"
+              :placeholder="categoryList.length == 0 ? '请先选择产品类型' : '请选择分类'"
               class="w-1/1"
+              @change="handleCategoryChange"
             />
           </el-form-item>
         </el-col>
+
         <el-col :span="12">
           <el-form-item label="单位" prop="unitId">
             <el-select v-model="formData.unitId" clearable placeholder="请选择单位" class="w-1/1">
@@ -135,7 +156,7 @@ import { ProductCategoryApi, ProductCategoryVO } from '@/api/erp/product/categor
 import { ProductUnitApi, ProductUnitVO } from '@/api/erp/product/unit'
 import { CommonStatusEnum } from '@/utils/constants'
 import { defaultProps, handleTree } from '@/utils/tree'
-import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
+import { DICT_TYPE, getIntDictOptions, getStrDictOptions } from '@/utils/dict'
 
 /** ERP 产品 表单 */
 defineOptions({ name: 'ProductForm' })
@@ -152,6 +173,7 @@ const formData = ref({
   name: undefined,
   barCode: undefined,
   categoryId: undefined,
+  productType:undefined,
   unitId: undefined,
   status: undefined,
   standard: undefined,
@@ -164,14 +186,16 @@ const formData = ref({
 })
 const formRules = reactive({
   name: [{ required: true, message: '产品名称不能为空', trigger: 'blur' }],
-  barCode: [{ required: true, message: '产品条码不能为空', trigger: 'blur' }],
+  // barCode: [{ required: true, message: '产品条码不能为空', trigger: 'blur' }],
   categoryId: [{ required: true, message: '产品分类编号不能为空', trigger: 'blur' }],
+  productType: [{ required: true, message: '产品类型不能为空', trigger: 'blur' }],
   unitId: [{ required: true, message: '单位编号不能为空', trigger: 'blur' }],
   status: [{ required: true, message: '产品状态不能为空', trigger: 'blur' }]
 })
 const formRef = ref() // 表单 Ref
 const categoryList = ref<ProductCategoryVO[]>([]) // 产品分类列表
 const unitList = ref<ProductUnitVO[]>([]) // 产品单位列表
+const previousCategoryId = ref<number | undefined>() // 保存之前选择的分类ID
 
 /** 打开弹窗 */
 const open = async (type: string, id?: number) => {
@@ -184,23 +208,94 @@ const open = async (type: string, id?: number) => {
     formLoading.value = true
     try {
       formData.value = await ProductApi.getProduct(id)
+      // 初始化之前的分类ID
+      previousCategoryId.value = formData.value.categoryId
     } finally {
       formLoading.value = false
     }
   }
   // 产品分类
-  const categoryData = await ProductCategoryApi.getProductCategorySimpleList()
-  categoryList.value = handleTree(categoryData, 'id', 'parentId')
+  await getProductCategoryListByProductType(formData.value.productType)
   // 产品单位
   unitList.value = await ProductUnitApi.getProductUnitSimpleList()
 }
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
+
+/**
+ * 根据产品类型获取分类列表
+ */
+const getProductCategoryListByProductType = async (productType?:string) => {
+  if (!productType) {
+    // 如果产品分类为空，清除分类列表
+    categoryList.value = []
+    return
+  }
+  const categoryData = await ProductCategoryApi.getProductCategoryListByProductType(productType)
+  categoryList.value = handleTree(categoryData, 'id', 'parentId')
+}
+
+/** 处理分类选择变化 */
+const handleCategoryChange = (categoryId: number) => {
+  if (categoryId && !checkSelectedCategoryIsLeaf(categoryId)) {
+    // 恢复到之前的选择，不改变当前选择
+    nextTick(() => {
+      formData.value.categoryId = previousCategoryId.value
+    })
+  } else {
+    // 如果是叶子节点，更新之前的值
+    previousCategoryId.value = categoryId
+  }
+}
+
+/** 校验所选分类是否为叶子节点分类 */
+const checkSelectedCategoryIsLeaf = (categoryId: number) => {
+  // 如果没有选择分类，则返回 true
+  if (!categoryId) return true
+  
+  // 查找选中的节点
+  const selectedNode = findNodeInTree(categoryList.value, categoryId)
+  if (!selectedNode) {
+    message.warning('所选分类不存在')
+    return false
+  }
+  
+  // 检查是否为叶子节点（没有子节点或子节点数组为空）
+  const isLeaf = !selectedNode.children || selectedNode.children.length === 0
+  if (!isLeaf) {
+    message.warning('请选择叶子节点分类')
+    return false
+  }
+  
+  return true
+}
+
+/** 在树形结构中查找指定节点 */
+const findNodeInTree = (tree: any[], nodeId: any): any => {
+  for (const node of tree) {
+    if (node.id === nodeId) {
+      return node
+    }
+    if (node.children && node.children.length > 0) {
+      const found = findNodeInTree(node.children, nodeId)
+      if (found) {
+        return found
+      }
+    }
+  }
+  return null
+}
 
 /** 提交表单 */
 const emit = defineEmits(['success']) // 定义 success 事件，用于操作成功后的回调
 const submitForm = async () => {
   // 校验表单
   await formRef.value.validate()
+  
+  // 校验分类是否为叶子节点
+  if (formData.value.categoryId && !checkSelectedCategoryIsLeaf(formData.value.categoryId)) {
+    return
+  }
+  
   // 提交请求
   formLoading.value = true
   try {
@@ -220,6 +315,11 @@ const submitForm = async () => {
   }
 }
 
+/** 监听产品分类的改变 */
+// watch(() => formData.value.productType, async (value) => {
+//   await getProductCategoryListByProductType(value)
+// })
+
 /** 重置表单 */
 const resetForm = () => {
   formData.value = {
@@ -237,6 +337,8 @@ const resetForm = () => {
     salePrice: undefined,
     minPrice: undefined
   }
+  // 重置之前的分类ID
+  previousCategoryId.value = undefined
   formRef.value?.resetFields()
 }
 </script>

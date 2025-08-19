@@ -11,7 +11,7 @@
       :inline="true"
       label-width="68px"
     >
-      <el-form-item label="名称" prop="name">
+      <el-form-item label="名称" prop="name" label-width="90">
         <el-input
           v-model="queryParams.name"
           placeholder="请输入名称"
@@ -25,9 +25,32 @@
           v-model="queryParams.categoryId"
           :data="categoryList"
           :props="defaultProps"
+          filterable
           check-strictly
           default-expand-all
-          placeholder="请输入分类"
+          placeholder="请选择分类"
+          class="!w-240px"
+          @change="handleCategoryChange"
+        />
+      </el-form-item>
+      <el-form-item label="产品类型" prop="productType" label-width="100">
+        <el-select v-model="queryParams.productType" placeholder="请选择产品类型" clearable class="!w-240px">
+          <el-option
+            v-for="dict in getStrDictOptions(DICT_TYPE.ERP_PRODUCT_TYPE)"
+            :key="dict.value"
+            :label="dict.label"
+            :value="dict.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="创建时间" prop="createTime" label-width="90">
+        <el-date-picker
+          v-model="queryParams.createTime"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          type="daterange"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"
           class="!w-240px"
         />
       </el-form-item>
@@ -58,30 +81,35 @@
   <!-- 列表 -->
   <ContentWrap>
     <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true">
-      <el-table-column label="条码" align="center" prop="barCode" />
-      <el-table-column label="名称" align="center" prop="name" />
-      <el-table-column label="规格" align="center" prop="standard" />
-      <el-table-column label="分类" align="center" prop="categoryName" />
-      <el-table-column label="单位" align="center" prop="unitName" />
+      <el-table-column label="条码" align="center" prop="barCode" width="200"/>
+      <el-table-column label="名称" align="center" prop="name"  width="100"/>
+      <el-table-column label="分类" align="center" prop="categoryName"  width="100"/>
+      <el-table-column label="类型" align="center" prop="productType" width="100" >
+        <template #default="scope">
+          <dict-tag :type="DICT_TYPE.ERP_PRODUCT_TYPE" :value="scope.row.productType" />
+        </template>
+      </el-table-column>
+      <el-table-column label="规格" align="center" prop="standard"  width="100"/>
+      <el-table-column label="单位" align="center" prop="unitName"  width="100"/>
       <el-table-column
         label="采购价格"
         align="center"
         prop="purchasePrice"
-        :formatter="erpPriceTableColumnFormatter"
+        :formatter="erpPriceTableColumnFormatter" width="100"
       />
       <el-table-column
         label="销售价格"
         align="center"
         prop="salePrice"
-        :formatter="erpPriceTableColumnFormatter"
+        :formatter="erpPriceTableColumnFormatter" width="100"
       />
       <el-table-column
         label="最低价格"
         align="center"
         prop="minPrice"
-        :formatter="erpPriceTableColumnFormatter"
+        :formatter="erpPriceTableColumnFormatter" width="100"
       />
-      <el-table-column label="状态" align="center" prop="status">
+      <el-table-column label="状态" align="center" prop="status" width="80">
         <template #default="scope">
           <dict-tag :type="DICT_TYPE.COMMON_STATUS" :value="scope.row.status" />
         </template>
@@ -91,9 +119,9 @@
         align="center"
         prop="createTime"
         :formatter="dateFormatter"
-        width="180px"
+        width="220px"
       />
-      <el-table-column label="操作" align="center" width="110">
+      <el-table-column label="操作" align="center" width="160" fixed="right">
         <template #default="scope">
           <el-button
             link
@@ -133,7 +161,7 @@ import download from '@/utils/download'
 import { ProductApi, ProductVO } from '@/api/erp/product/product'
 import { ProductCategoryApi, ProductCategoryVO } from '@/api/erp/product/category'
 import ProductForm from './ProductForm.vue'
-import { DICT_TYPE } from '@/utils/dict'
+import { DICT_TYPE, getStrDictOptions } from '@/utils/dict'
 import { defaultProps, handleTree } from '@/utils/tree'
 import { erpPriceTableColumnFormatter } from '@/utils'
 
@@ -150,11 +178,14 @@ const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
   name: undefined,
-  categoryId: undefined
+  categoryId: undefined,
+  productType: undefined,
+  createTime: undefined
 })
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
 const categoryList = ref<ProductCategoryVO[]>([]) // 产品分类列表
+const previousSearchCategoryId = ref<number | undefined>() // 保存之前选择的搜索分类ID
 
 /** 查询列表 */
 const getList = async () => {
@@ -177,7 +208,59 @@ const handleQuery = () => {
 /** 重置按钮操作 */
 const resetQuery = () => {
   queryFormRef.value.resetFields()
+  // 重置之前的分类ID
+  previousSearchCategoryId.value = undefined
   handleQuery()
+}
+
+/** 处理搜索分类选择变化 */
+const handleCategoryChange = (categoryId: number) => {
+  if (categoryId && !checkSelectedCategoryIsLeaf(categoryId)) {
+    // 恢复到之前的选择，不改变当前选择
+    nextTick(() => {
+      queryParams.categoryId = previousSearchCategoryId.value
+    })
+  } else {
+    // 如果是叶子节点，更新之前的值
+    previousSearchCategoryId.value = categoryId
+  }
+}
+
+/** 校验所选分类是否为叶子节点分类 */
+const checkSelectedCategoryIsLeaf = (categoryId: number) => {
+  if (!categoryId) return true
+
+  // 查找选中的节点
+  const selectedNode = findNodeInTree(categoryList.value, categoryId)
+  if (!selectedNode) {
+    message.warning('所选分类不存在')
+    return false
+  }
+
+  // 检查是否为叶子节点（没有子节点或子节点数组为空）
+  const isLeaf = !selectedNode.children || selectedNode.children.length === 0
+  if (!isLeaf) {
+    message.warning('请选择叶子节点分类')
+    return false
+  }
+
+  return true
+}
+
+/** 在树形结构中查找指定节点 */
+const findNodeInTree = (tree: any[], nodeId: any): any => {
+  for (const node of tree) {
+    if (node.id === nodeId) {
+      return node
+    }
+    if (node.children && node.children.length > 0) {
+      const found = findNodeInTree(node.children, nodeId)
+      if (found) {
+        return found
+      }
+    }
+  }
+  return null
 }
 
 /** 添加/修改操作 */
@@ -220,5 +303,7 @@ onMounted(async () => {
   // 产品分类
   const categoryData = await ProductCategoryApi.getProductCategorySimpleList()
   categoryList.value = handleTree(categoryData, 'id', 'parentId')
+  // 初始化之前的分类ID
+  previousSearchCategoryId.value = queryParams.categoryId
 })
 </script>

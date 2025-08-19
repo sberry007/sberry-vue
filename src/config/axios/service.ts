@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 
-import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import qs from 'qs'
 import { config } from '@/config/axios/config'
 import {
@@ -13,11 +13,20 @@ import {
 } from '@/utils/auth'
 import errorCode from './errorCode'
 
-import { resetRouter } from '@/router'
+import router, { resetRouter } from '@/router'
 import { deleteUserCache } from '@/hooks/web/useCache'
+import { useMessage } from '@/hooks/web/useMessage'
+import { useI18n } from '@/hooks/web/useI18n'
+
+const message = useMessage()
 
 const tenantEnable = import.meta.env.VITE_APP_TENANT_ENABLE
 const { result_code, base_url, request_timeout } = config
+
+// 并发请求下的强制下线去重守卫（仅在当前页面会话有效，页面刷新后重置）
+const forceLogoutGuard = { firing: false }
+// 用户/租户被禁用等需要强制下线的业务错误码（集中定义，便于维护）
+const DISABLED_USER_CODES = [1002003006, 1002015001, 1002015002, 1002000001]
 
 // 需要忽略的提示。忽略后，自动 Promise.reject('error')
 const ignoreMsgs = [
@@ -98,7 +107,7 @@ service.interceptors.response.use(
     let { data } = response
     const config = response.config
     if (!data) {
-      // 返回“[HTTP]请求没有返回值”;
+      // 返回“[HTTP]请求没有返回值”；
       throw new Error()
     }
     const { t } = useI18n()
@@ -114,7 +123,7 @@ service.interceptors.response.use(
       }
       data = await new Response(response.data).json()
     }
-    const code = data.code || result_code
+    const code = data.code ?? result_code
     // 获取错误信息
     const msg = data.msg || errorCode[code] || errorCode['default']
     if (ignoreMsgs.indexOf(msg) !== -1) {
@@ -161,29 +170,92 @@ service.interceptors.response.use(
         })
       }
     } else if (code === 500) {
-      ElMessage.error(t('sys.api.errMsg500'))
+      message.error(t('sys.api.errMsg500'))
       return Promise.reject(new Error(msg))
     } else if (code === 901) {
-      ElMessage.error({
-        offset: 300,
-        dangerouslyUseHTMLString: true,
-        message:
-          '<div>' +
-          t('sys.api.errMsg901') +
-          '</div>' +
-          '<div> &nbsp; </div>' +
-          '<div>参考 https://doc.iocoder.cn/ 教程</div>' +
-          '<div> &nbsp; </div>' +
-          '<div>5 分钟搭建本地环境</div>'
-      })
+      message.error(
+        `${t('sys.api.errMsg901')} 参考 https://doc.sberry.cloud/ 教程，5 分钟搭建本地环境`
+      )
       return Promise.reject(new Error(msg))
-    } else if (code !== 200) {
+    } else if (code !== 0) {
+      // 如果后端返回用户或租户被禁用等业务错误码，则直接登出并跳转登录页（非阻塞提示 + 跳转去重）
+      if (DISABLED_USER_CODES.includes(Number(code))) {
+        // 已经在处理强制下线，后续并发响应直接忽略，避免重复弹窗/跳转
+        if (forceLogoutGuard.firing) {
+          return Promise.reject(msg)
+        }
+        forceLogoutGuard.firing = true
+        
+        // 计算当前是否已在登录页
+        const path = window.location.pathname || ''
+        const hash = window.location.hash || ''
+        const isLogin = path === '/login' || path === '/login/' || hash.startsWith('#/login')
+        
+        // 任何页面都显示提示框
+        try {
+          await message.alertError(msg)
+        } catch {
+          // 用户关闭提示框也视为确认
+        }
+        
+        /**
+         * 执行用户会话清理操作
+         * 当用户被禁用或令牌失效时，需要彻底清理用户相关的所有数据和状态
+         * 确保系统安全性和数据一致性
+         */
+        
+        console.log('[DEBUG] 开始重置路由，当前路由数量:', router.getRoutes().length)
+        
+        /**
+         * 重置路由系统
+         * 功能说明：
+         * 1. 移除所有动态添加的路由（除白名单路由外）
+         * 2. 清空 permission store 中的路由缓存
+         * 3. 防止用户在被禁用后仍能访问有权限的页面
+         * 
+         * 安全考虑：
+         * - 避免权限泄露：确保被禁用用户无法继续访问受保护的路由
+         * - 防止路由冲突：清理旧路由避免与重新登录后的新路由产生冲突
+         * - 数据一致性：确保路由状态与用户权限状态保持同步
+         * 
+         * 异常处理：
+         * 使用 try-catch 包装，即使路由重置失败也不影响后续的清理流程
+         * 这样可以确保用户缓存和令牌的清理能够正常执行
+         */
+        try { resetRouter() } catch {}
+        
+        console.log('[DEBUG] 路由重置完成，当前路由数量:', router.getRoutes().length)
+        
+        /**
+         * 清理用户相关缓存数据
+         * 包括：用户信息缓存、角色路由缓存、访问租户ID缓存等
+         * 确保下次登录时重新获取最新的用户数据和权限信息
+         */
+        try { deleteUserCache() } catch {}
+        
+        /**
+         * 移除用户认证令牌
+         * 清理访问令牌和刷新令牌，确保用户无法继续使用已失效的令牌
+         * 这是安全清理的最后一步，彻底断开用户的认证状态
+         */
+        try { removeToken() } catch {}
+        
+        // 只有非登录页才跳转到首页（避免重新登录后出现404问题）
+        if (!isLogin) {
+          router.replace('/')
+        }
+
+        // 重置守卫状态
+        forceLogoutGuard.firing = false
+        return Promise.reject(msg)
+      }
+
       if (msg === '无效的刷新令牌') {
         // hard coding：忽略这个提示，直接登出
         console.log(msg)
         return handleAuthorized()
       } else {
-        ElNotification.error({ title: msg })
+        message.error(msg)
       }
       return Promise.reject('error')
     } else {
@@ -192,16 +264,16 @@ service.interceptors.response.use(
   },
   (error: AxiosError) => {
     console.log('err' + error) // for debug
-    let { message } = error
+    let { message: errMsg } = error
     const { t } = useI18n()
-    if (message === 'Network Error') {
-      message = t('sys.api.errorMessage')
-    } else if (message.includes('timeout')) {
-      message = t('sys.api.apiTimeoutMessage')
-    } else if (message.includes('Request failed with status code')) {
-      message = t('sys.api.apiRequestFailed') + message.substr(message.length - 3)
+    if (errMsg === 'Network Error') {
+      errMsg = t('sys.api.errorMessage')
+    } else if (errMsg.includes('timeout')) {
+      errMsg = t('sys.api.apiTimeoutMessage')
+    } else if (errMsg.includes('Request failed with status code')) {
+      errMsg = t('sys.api.apiRequestFailed') + errMsg.substr(errMsg.length - 3)
     }
-    ElMessage.error(message)
+    message.error(errMsg)
     return Promise.reject(error)
   }
 )

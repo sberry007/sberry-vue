@@ -71,7 +71,8 @@ router.beforeEach(async (to, from, next) => {
       if (!dictStore.getIsSetDict) {
         await dictStore.setDictMap()
       }
-      if (!userStore.getIsSetUser) {
+      // 如果用户信息未设置，或者动态路由尚未生成（可能发生于租户状态变更后），都需要重新拉取并生成路由
+      if (!userStore.getIsSetUser || permissionStore.getAddRouters.length === 0) {
         isRelogin.show = true
         await userStore.setUserInfoAction()
         isRelogin.show = false
