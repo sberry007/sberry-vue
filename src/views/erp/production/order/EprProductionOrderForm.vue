@@ -56,7 +56,8 @@
 
 
 
-        <el-col :span="8">
+        <!-- 订单状态字段已隐藏 -->
+        <!-- <el-col :span="8">
           <el-form-item label="订单状态" prop="status">
             <template v-if="formType === 'detail'">
               <dict-tag :type="DICT_TYPE.ERP_PRODUCTION_ORDER_STATUS" :value="formData.status" />
@@ -77,7 +78,7 @@
               />
             </el-select>
           </el-form-item>
-        </el-col>
+        </el-col> -->
 
 
         <!--        <el-col :span="8">-->
@@ -96,10 +97,7 @@
               :items="formData.items || []" 
               :disabled="formType === 'detail'"
               :warehouse-list="warehouseList"
-              v-model:warehouse-id="formData.warehouseId"
-              v-model:priority="formData.priority"
-              v-model:planned-quantity="formData.plannedQuantity"
-              v-model:remark="formData.remark"
+              @update:items="handleItemsUpdate"
             />
           </el-tab-pane>
         </el-tabs>
@@ -119,6 +117,7 @@
 import { EprProductionOrderApi, EprProductionOrderVO } from '@/api/erp/production/order'
 import { getDictListByType } from '@/api/system/dict/dict.data' // 引入字典数据API
 import { ProductApi, ProductVO } from '@/api/erp/product/product' // 引入产品API
+import { ProductUnitApi } from '@/api/erp/product/unit' // 引入产品单位API
 import { DICT_TYPE } from '@/utils/dict'
 import { WarehouseApi, WarehouseVO } from '@/api/erp/stock/warehouse' // 引入仓库API
 import { CustomerApi, CustomerVO } from '@/api/erp/sale/customer'
@@ -220,40 +219,61 @@ const open = async (type: string, id?: number) => {
     try {
       formData.value = await EprProductionOrderApi.getEprProductionOrder(id)
       
-      // 在详情或编辑模式下，如果有关联的销售订单，需要获取订单号和产品清单
+      // 在详情或编辑模式下，如果有关联的销售订单，只获取订单号
       if ((type === 'detail' || type === 'update') && formData.value.saleOrderId) {
         try {
           const saleOrder = await SaleOrderApi.getSaleOrder(formData.value.saleOrderId)
           formData.value.saleOrderNo = saleOrder.no
-          
-          // 获取销售订单的产品清单
-          const orderItems = await EprProductionOrderApi.getSaleOrderItemsByOrderId(formData.value.saleOrderId)
-          if (orderItems && orderItems.length > 0) {
-            // 获取所有产品ID
-            const productIds = orderItems.map(item => item.productId)
-            
-            // 从产品列表中获取产品详细信息
-            const productMap = new Map()
-            for (const product of productList.value) {
-              if (productIds.includes(product.id)) {
-                productMap.set(product.id, product)
-              }
-            }
-            
-            // 填充产品清单，包含产品详细信息
-            formData.value.items = orderItems.map(item => {
-              const product = productMap.get(item.productId)
-              return {
-                ...item,
-                productName: product?.name || '未知产品',
-                productBarCode: product?.barCode || '',
-                productUnitName: product?.unitName || '',
-                availableCount: (item.count || 0) - (item.outCount || 0)
-              }
-            })
-          }
         } catch (error) {
           console.error('获取销售订单信息失败:', error)
+        }
+      }
+      
+      // 在详情或编辑模式下，只显示当前生产订单对应的产品信息
+      if ((type === 'detail' || type === 'update') && formData.value.productId) {
+        try {
+          // 获取当前生产订单的产品信息
+          const product = await ProductApi.getProduct(formData.value.productId)
+          
+          // 获取产品单位名称
+          let unitName = product?.unitName || ''
+          if (!unitName && product?.unitId) {
+            try {
+              const unit = await ProductUnitApi.getProductUnit(product.unitId)
+              unitName = unit?.name || ''
+            } catch (error) {
+              console.error('获取产品单位信息失败:', error)
+            }
+          }
+          
+          // 构建当前生产订单的产品项
+          formData.value.items = [{
+            productId: formData.value.productId,
+            productName: product?.name || '未知产品',
+            productBarCode: product?.barCode || '',
+            productUnitName: unitName,
+            productPrice: product?.salePrice || 0, // 产品单价字段
+            count: formData.value.plannedQuantity || 0, // 订单数量字段
+            warehouseId: formData.value.warehouseId,
+            priority: formData.value.priority || 1,
+            plannedQuantity: formData.value.plannedQuantity || 0,
+            remark: formData.value.remark || ''
+          }]
+        } catch (error) {
+          console.error('获取产品信息失败:', error)
+          // 如果获取产品信息失败，至少显示基本信息
+          formData.value.items = [{
+            productId: formData.value.productId,
+            productName: '未知产品',
+            productBarCode: '',
+            productUnitName: '',
+            productPrice: 0, // 产品单价字段
+            count: formData.value.plannedQuantity || 0, // 订单数量字段
+            warehouseId: formData.value.warehouseId,
+            priority: formData.value.priority || 1,
+            plannedQuantity: formData.value.plannedQuantity || 0,
+            remark: formData.value.remark || ''
+          }]
         }
       }
       
@@ -279,16 +299,81 @@ defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 /** 提交表单 */
 const emit = defineEmits(['success']) // 定义 success 事件，用于操作成功后的回调
 const submitForm = async () => {
-  // 校验表单
-  await formRef.value.validate()
   // 提交请求
   formLoading.value = true
   try {
-    const data = formData.value as unknown as EprProductionOrderVO
     if (formType.value === 'create') {
-      await EprProductionOrderApi.createEprProductionOrder(data)
-      message.success(t('common.createSuccess'))
+      // 检查是否有关联销售订单且包含多个产品
+      if (formData.value.saleOrderId && formData.value.items && formData.value.items.length > 1) {
+        // 一对一拆分：为每个产品创建一个独立的生产订单
+        const createdOrders = []
+        for (const item of formData.value.items) {
+          // 验证必填字段
+          if (!item.warehouseId) {
+            message.error(`产品 ${item.productName} 的仓库不能为空`)
+            return
+          }
+          if (!item.plannedQuantity || item.plannedQuantity <= 0) {
+            message.error(`产品 ${item.productName} 的计划生产数量不能为空且必须大于0`)
+            return
+          }
+          
+          const orderData = {
+            saleOrderId: formData.value.saleOrderId,
+            productId: item.productId,
+            warehouseId: item.warehouseId,
+            plannedQuantity: item.plannedQuantity,
+            priority: item.priority || 1, // 默认普通优先级
+            status: formData.value.status || 1, // 默认待生产状态
+            plannedStartDate: formData.value.plannedStartDate,
+            plannedEndDate: formData.value.plannedEndDate,
+            remark: item.remark || formData.value.remark
+          }
+          
+          try {
+            const orderId = await EprProductionOrderApi.createEprProductionOrder(orderData)
+            createdOrders.push(orderId)
+          } catch (error) {
+            console.error(`创建产品 ${item.productName} 的生产订单失败:`, error)
+            message.error(`创建产品 ${item.productName} 的生产订单失败`)
+            return
+          }
+        }
+        message.success(`成功创建 ${createdOrders.length} 个生产订单`)
+      } else {
+        // 单个产品或无关联销售订单的情况，按原逻辑处理
+        // 校验表单
+        await formRef.value.validate()
+        
+        // 如果有子表单数据且只有一个产品，从子表单中获取仓库信息
+        if (formData.value.items && formData.value.items.length === 1) {
+          const item = formData.value.items[0]
+          if (item.warehouseId) {
+            formData.value.warehouseId = item.warehouseId
+          }
+          if (item.plannedQuantity) {
+            formData.value.plannedQuantity = item.plannedQuantity
+          }
+          if (item.priority !== undefined) {
+            formData.value.priority = item.priority
+          }
+        }
+        
+        const data = formData.value as unknown as EprProductionOrderVO
+        await EprProductionOrderApi.createEprProductionOrder(data)
+        message.success(t('common.createSuccess'))
+      }
     } else {
+      // 更新逻辑：确保备注字段正确同步
+      // 如果有产品项且只有一个产品，将产品项的备注同步到主表单
+      if (formData.value.items && formData.value.items.length === 1) {
+        const item = formData.value.items[0]
+        if (item.remark) {
+          formData.value.remark = item.remark
+        }
+      }
+      
+      const data = formData.value as unknown as EprProductionOrderVO
       await EprProductionOrderApi.updateEprProductionOrder(data)
       message.success(t('common.updateSuccess'))
     }
@@ -341,6 +426,11 @@ const openSaleOrderEnableList = () => {
   saleOrderEnableListRef.value.open()
 }
 
+/** 处理产品项数据更新 */
+const handleItemsUpdate = (updatedItems: any[]) => {
+  formData.value.items = updatedItems
+}
+
 /** 处理销售订单选择 */
 const handleSaleOrderChange = async (order: any) => {
   console.log('选择的销售订单数据:', order)
@@ -367,7 +457,7 @@ const handleSaleOrderChange = async (order: any) => {
       }
     }
 
-    // 填充产品清单，包含产品详细信息
+    // 填充产品清单，包含产品详细信息，并为每个产品项初始化独立的字段
     formData.value.items = order.items.map(item => {
       const product = productMap.get(item.productId)
       return {
@@ -375,7 +465,11 @@ const handleSaleOrderChange = async (order: any) => {
         productName: product?.name || '未知产品',
         productBarCode: product?.barCode || '',
         productUnitName: product?.unitName || '',
-        availableCount: (item.count || 0) - (item.outCount || 0)
+        availableCount: (item.count || 0) - (item.outCount || 0),
+        warehouseId: undefined,
+        priority: undefined,
+        plannedQuantity: '',
+        remark: item.remark || '' // 保留销售订单中的备注内容
       }
     })
     console.log('填充后的产品清单:', formData.value.items)
@@ -388,11 +482,14 @@ const handleSaleOrderChange = async (order: any) => {
     // 计划数量 = 订单数量 - 已出库数量（可用于生产的数量）
     const availableQuantity = item.count - (item.outCount || 0)
     formData.value.plannedQuantity = availableQuantity > 0 ? availableQuantity : item.count
+    // 设置仓库ID，如果销售订单项中有仓库信息则使用，否则保持当前选择
+    if (item.warehouseId) {
+      formData.value.warehouseId = item.warehouseId
+    }
   } else if (order.items && order.items.length > 1) {
-    // 如果有多个产品，清空产品选择，让用户手动选择
+    // 如果有多个产品，清空产品选择，系统将自动为每个产品创建独立的生产订单
     formData.value.productId = undefined
     formData.value.plannedQuantity = undefined
-    message.info('该销售订单包含多个产品，请手动选择要生产的产品')
   }
   
   message.success('已关联销售订单：' + order.no)

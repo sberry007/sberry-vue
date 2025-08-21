@@ -68,7 +68,7 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="备注" prop="remark">
+      <el-form-item label="备注" prop="remark" >
         <el-input
           v-model="queryParams.remark"
           placeholder="请输入备注"
@@ -153,7 +153,7 @@
           <dict-tag :type="DICT_TYPE.ERP_PRODUCTION_ORDER_PRIORITY" :value="scope.row.priority" />
         </template>
       </el-table-column>
-      <el-table-column label="备注" align="center" prop="remark" />
+      <el-table-column label="备注" align="center" prop="remark" width="120" />
       <el-table-column
         label="创建时间"
         align="center"
@@ -207,6 +207,7 @@
             type="danger"
             @click="handleDelete(scope.row.id)"
             v-hasPermi="['erp-production:epr-production-order:delete']"
+            :disabled="scope.row.status === 2"
           >
             删除
           </el-button>

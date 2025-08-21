@@ -69,16 +69,16 @@
       
       <!-- 固定列：仓库、优先级、计划生产数量、备注 -->
       <el-table-column label="仓库" min-width="150" fixed="right">
-        <template #default>
+        <template #default="{ row, $index }">
           <el-form-item class="mb-0px!">
             <el-select
-              v-model="warehouseId"
+              v-model="row.warehouseId"
               placeholder="请选择仓库"
               clearable
               filterable
               :disabled="disabled"
               class="!w-1/1"
-              @change="handleWarehouseChange"
+              @change="(value) => handleWarehouseChange($index, value)"
             >
               <el-option
                 v-for="item in warehouseList"
@@ -92,15 +92,15 @@
       </el-table-column>
       
       <el-table-column label="优先级" min-width="120" fixed="right">
-        <template #default>
+        <template #default="{ row, $index }">
           <el-form-item class="mb-0px!">
             <el-select
-              v-model="priority"
+              v-model="row.priority"
               placeholder="请选择优先级"
               clearable
               :disabled="disabled"
               class="!w-1/1"
-              @change="handlePriorityChange"
+              @change="(value) => handlePriorityChange($index, value)"
             >
               <el-option :value="0" label="低" />
               <el-option :value="1" label="普通" />
@@ -112,26 +112,26 @@
       </el-table-column>
       
       <el-table-column label="计划生产数量" min-width="140" fixed="right">
-        <template #default>
+        <template #default="{ row, $index }">
           <el-form-item class="mb-0px!">
             <el-input 
-              v-model="plannedQuantity" 
+              v-model="row.plannedQuantity" 
               placeholder="请输入计划生产数量" 
               :disabled="disabled"
-              @input="handlePlannedQuantityChange"
+              @input="(value) => handlePlannedQuantityChange($index, value)"
             />
           </el-form-item>
         </template>
       </el-table-column>
       
       <el-table-column label="备注" min-width="150" fixed="right">
-        <template #default>
+        <template #default="{ row, $index }">
           <el-form-item class="mb-0px!">
             <el-input 
-              v-model="remark" 
+              v-model="row.remark" 
               placeholder="请输入备注" 
               :disabled="disabled"
-              @input="handleRemarkChange"
+              @input="(value) => handleRemarkChange($index, value)"
             />
           </el-form-item>
         </template>
@@ -150,76 +150,62 @@ const props = defineProps<{
   items: any[]
   disabled: boolean
   warehouseList?: any[]
-  warehouseId?: number
-  priority?: number
-  plannedQuantity?: string
-  remark?: string
 }>()
 
 const formLoading = ref(false) // 表单的加载中
 const formData = ref([])
 const formRef = ref([]) // 表单 Ref
 
-// 表单字段的响应式数据
-const warehouseId = ref(props.warehouseId)
-const priority = ref(props.priority)
-const plannedQuantity = ref(props.plannedQuantity)
-const remark = ref(props.remark)
-
 // 定义事件
 const emit = defineEmits<{
-  'update:warehouseId': [value: number | undefined]
-  'update:priority': [value: number | undefined]
-  'update:plannedQuantity': [value: string | undefined]
-  'update:remark': [value: string | undefined]
+  'update:items': [value: any[]]
 }>()
 
 // 处理仓库变化
-const handleWarehouseChange = (value: number | undefined) => {
-  emit('update:warehouseId', value)
+const handleWarehouseChange = (index: number, value: number | undefined) => {
+  const updatedItems = [...formData.value]
+  updatedItems[index] = { ...updatedItems[index], warehouseId: value }
+  formData.value = updatedItems
+  emit('update:items', updatedItems)
 }
 
 // 处理优先级变化
-const handlePriorityChange = (value: number | undefined) => {
-  emit('update:priority', value)
+const handlePriorityChange = (index: number, value: number | undefined) => {
+  const updatedItems = [...formData.value]
+  updatedItems[index] = { ...updatedItems[index], priority: value }
+  formData.value = updatedItems
+  emit('update:items', updatedItems)
 }
 
 // 处理计划生产数量变化
-const handlePlannedQuantityChange = (value: string) => {
-  emit('update:plannedQuantity', value)
+const handlePlannedQuantityChange = (index: number, value: string) => {
+  const updatedItems = [...formData.value]
+  updatedItems[index] = { ...updatedItems[index], plannedQuantity: value }
+  formData.value = updatedItems
+  emit('update:items', updatedItems)
 }
 
 // 处理备注变化
-const handleRemarkChange = (value: string) => {
-  emit('update:remark', value)
+const handleRemarkChange = (index: number, value: string) => {
+  const updatedItems = [...formData.value]
+  updatedItems[index] = { ...updatedItems[index], remark: value }
+  formData.value = updatedItems
+  emit('update:items', updatedItems)
 }
-
-// 监听props变化
-watch(() => props.warehouseId, (val) => {
-  warehouseId.value = val
-}, { immediate: true })
-
-watch(() => props.priority, (val) => {
-  priority.value = val
-}, { immediate: true })
-
-watch(() => props.plannedQuantity, (val) => {
-  plannedQuantity.value = val
-}, { immediate: true })
-
-watch(() => props.remark, (val) => {
-  remark.value = val
-}, { immediate: true })
 
 /** 初始化设置产品项 */
 watch(
   () => props.items,
   async (val) => {
     if (val && val.length > 0) {
-      // 处理数据，计算可生产数量
+      // 处理数据，计算可生产数量，并为每个产品项初始化独立的字段
       formData.value = val.map(item => ({
         ...item,
-        availableCount: (item.count || 0) - (item.outCount || 0)
+        availableCount: (item.count || 0) - (item.outCount || 0),
+        warehouseId: item.warehouseId || undefined,
+        priority: item.priority !== undefined ? item.priority : undefined,
+        plannedQuantity: item.plannedQuantity || '',
+        remark: item.remark || ''
       }))
     } else {
       formData.value = []

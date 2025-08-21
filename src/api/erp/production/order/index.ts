@@ -74,5 +74,10 @@ export const EprProductionOrderApi = {
   // 根据销售订单ID，获取该订单的订单项列表
   getSaleOrderItemsByOrderId: async (orderId: number) => {
     return await request.get({ url: `/erp-production/order/sale-order/items?orderId=${orderId}` })
+  },
+
+  // 获取已审批的生产订单列表（用于生产入库）
+  getApprovedProductionOrders: async () => {
+    return await request.get({ url: `/erp-production/order/approved-list` })
   }
 }

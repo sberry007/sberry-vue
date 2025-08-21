@@ -146,10 +146,14 @@ export enum DICT_TYPE {
   // ========== ERP - 企业资源计划模块  ==========
   ERP_AUDIT_STATUS = 'erp_audit_status', // ERP 审批状态
   ERP_STOCK_RECORD_BIZ_TYPE = 'erp_stock_record_biz_type', // 库存明细的业务类型
-  ERP_PRODUCTION_ORDER_STATUS = 'erp_production_order_status', // 生产订单的状态
-  ERP_PRODUCTION_ORDER_PRIORITY = 'erp_production_order_priority', // 生产订单的优先级
+  // ========== 产品  ==========
   ERP_PRODUCT_TYPE = 'erp_product_type', // 产品类型
   ERP_PRODUCT_CATEGORY_LEVEL = 'erp_product_category_level', // 产品分类层
+
+  // ========== 生产  ==========
+  ERP_PRODUCTION_ORDER_STATUS = 'erp_production_order_status', // 生产订单的状态
+  ERP_PRODUCTION_ORDER_PRIORITY = 'erp_production_order_priority', // 生产订单的优先级
+  ERP_PRODUCTION_IN_STOCK_PRIORITY = 'erp_production_stock_in', // 生产入库状态
 
 
 
