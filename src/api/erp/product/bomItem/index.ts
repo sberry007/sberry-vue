@@ -12,6 +12,13 @@ export interface ProductBomItemVO {
   isKeyMaterial: boolean // 是否关键物料
   substituteGroup: string // 替代组
   notes: string // 备注
+  materialName?: string
+  materialCode?: string
+  materialSpec?: string
+  unitName?: string
+  materialPurchasePrice?: number
+  materialPurchaseUnitId?: number
+  materialPurchaseUnitName?: string
 }
 
 // BOM明细 API
