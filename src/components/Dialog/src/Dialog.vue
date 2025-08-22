@@ -87,7 +87,7 @@ function closedHandler() {
     <template #header="{ close }">
       <div class="relative h-54px flex items-center justify-between pl-15px pr-15px">
         <slot name="title">
-          {{ title }}
+          <span style="font-size: 20px">{{ title }}</span>
         </slot>
         <div
           class="absolute right-15px top-[50%] h-54px flex translate-y-[-50%] items-center justify-between"

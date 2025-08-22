@@ -142,12 +142,14 @@ export enum DICT_TYPE {
   INFRA_FILE_STORAGE = 'infra_file_storage',
   INFRA_OPERATE_TYPE = 'infra_operate_type',
 
-
   // ========== ERP - 企业资源计划模块  ==========
   ERP_AUDIT_STATUS = 'erp_audit_status', // ERP 审批状态
   ERP_STOCK_RECORD_BIZ_TYPE = 'erp_stock_record_biz_type', // 库存明细的业务类型
   // ========== 产品  ==========
   ERP_PRODUCT_TYPE = 'erp_product_type', // 产品类型
+  ERP_PRODUCT_CATEGORY_LEVEL = 'erp_product_category_level', // 产品分类层级
+  ERP_PRODUCT_BOM_STATUS = 'erp_product_bom_status', // 产品BOM状态
+  ERP_IS_DEFAULT_BOM = 'erp_is_default_bom', // 是否默认BOM
   ERP_PRODUCT_CATEGORY_LEVEL = 'erp_product_category_level', // 产品分类层
 
   // ========== 生产  ==========

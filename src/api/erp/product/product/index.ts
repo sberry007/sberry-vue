@@ -30,6 +30,11 @@ export const ProductApi = {
     return await request.get({ url: `/erp-product/simple-list` })
   },
 
+  // 根据产品类型查询产品精简列表
+  getProductSimpleListByType: async (productType: string) => {
+    return await request.get({ url: `/erp-product/simple-list?productType=${productType}` })
+  },
+
   // 查询产品详情
   getProduct: async (id: number) => {
     return await request.get({ url: `/erp-product/get?id=` + id })
@@ -53,5 +58,10 @@ export const ProductApi = {
   // 导出产品 Excel
   exportProduct: async (params) => {
     return await request.download({ url: `/erp-product/export-excel`, params })
+  },
+
+  // 根据产品类型查询产品列表
+  getProductListByType: async (productType: string) => {
+    return await request.get({ url: `/erp-product/list-by-type?productType=${productType}` })
   }
 }
