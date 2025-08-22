@@ -81,6 +81,18 @@
   <!-- 搜索工作栏 -->
   <ContentWrap>
     <div class="search-container">
+      <!-- WebSocket 连接状态指示器 -->
+      <div class="ws-status-indicator">
+        <el-tag 
+          :type="wsConnected ? 'success' : 'danger'" 
+          size="small"
+          effect="dark"
+        >
+          <Icon :icon="wsConnected ? 'ep:connection' : 'ep:close'" class="mr-5px" />
+          {{ wsConnected ? '实时推送已连接' : '实时推送已断开' }}
+        </el-tag>
+      </div>
+      
       <el-form
         class="search-form"
         :model="queryParams"
@@ -252,6 +264,7 @@
 <script setup lang="ts">
 import { formatDate } from '@/utils/formatTime'
 import { TempDeviceApi, TempDeviceVO } from '@/api/system/tempdevice'
+import { getAccessToken } from '@/utils/auth'
 import TempDeviceForm from './TempDeviceForm.vue'
 import DeviceDetailDialog from './DeviceDetailDialog.vue'
 
@@ -260,6 +273,10 @@ defineOptions({ name: 'TempDevice' })
 
 const message = useMessage() // 消息弹窗
 const { t } = useI18n() // 国际化
+
+// WebSocket 连接
+let websocket: WebSocket | null = null
+const wsConnected = ref(false)
 
 const loading = ref(true) // 列表的加载中
 const list = ref<TempDeviceVO[]>([]) // 列表的数据
@@ -408,9 +425,111 @@ const formatTime = (time: any) => {
   return formatDate(time)
 }
 
+// WebSocket 连接函数
+const connectWebSocket = () => {
+  try {
+    // 获取当前用户的访问令牌
+    const token = getAccessToken()
+    if (!token) {
+      console.warn('未获取到访问令牌，无法建立WebSocket连接')
+      return
+    }
+    const wsUrl = `ws://localhost:58080/system/ws?token=${token}`
+    websocket = new WebSocket(wsUrl)
+    
+    websocket.onopen = () => {
+      console.log('WebSocket 连接已建立')
+      wsConnected.value = true
+      message.success('实时推送已连接')
+    }
+    
+    websocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        handleWebSocketMessage(data)
+      } catch (error) {
+        console.error('解析WebSocket消息失败:', error)
+      }
+    }
+    
+    websocket.onclose = () => {
+      console.log('WebSocket 连接已关闭')
+      wsConnected.value = false
+      // 尝试重连
+      setTimeout(() => {
+        if (!wsConnected.value) {
+          connectWebSocket()
+        }
+      }, 5000)
+    }
+    
+    websocket.onerror = (error) => {
+      console.error('WebSocket 连接错误:', error)
+      wsConnected.value = false
+    }
+  } catch (error) {
+    console.error('创建WebSocket连接失败:', error)
+  }
+}
+
+// 处理WebSocket消息
+const handleWebSocketMessage = (data: any) => {
+  if (data.type === 'TEMP_DEVICE_STATUS') {
+    const deviceStatus = data.content
+    console.log('收到设备状态变更:', deviceStatus)
+    
+    // 显示通知消息
+    let statusText = ''
+    switch (deviceStatus.statusType) {
+      case 'ONLINE':
+        statusText = '上线'
+        message.success(`设备 ${deviceStatus.deviceName} 已上线`)
+        break
+      case 'OFFLINE':
+        statusText = '下线'
+        message.warning(`设备 ${deviceStatus.deviceName} 已下线`)
+        break
+      case 'ACTIVATED':
+        statusText = '激活'
+        message.success(`设备 ${deviceStatus.deviceName} 已激活`)
+        break
+      case 'DEACTIVATED':
+        statusText = '停用'
+        message.warning(`设备 ${deviceStatus.deviceName} 已停用`)
+        break
+    }
+    
+    // 更新设备列表中对应设备的状态
+    const deviceIndex = list.value.findIndex(device => device.id === deviceStatus.deviceId)
+    if (deviceIndex !== -1) {
+      list.value[deviceIndex].activeStatus = deviceStatus.activeStatus
+      list.value[deviceIndex].onlineStatus = deviceStatus.onlineStatus
+      list.value[deviceIndex].lastSeen = deviceStatus.lastSeen
+    } else {
+      // 如果设备不在当前列表中，刷新列表
+      getList()
+    }
+  }
+}
+
+// 断开WebSocket连接
+const disconnectWebSocket = () => {
+  if (websocket) {
+    websocket.close()
+    websocket = null
+    wsConnected.value = false
+  }
+}
+
 /** 初始化 **/
 onMounted(() => {
   getList()
+  connectWebSocket()
+})
+
+// 组件卸载时断开WebSocket连接
+onUnmounted(() => {
+  disconnectWebSocket()
 })
 </script>
 
@@ -843,6 +962,15 @@ onMounted(() => {
   border: 1px solid rgba(226, 232, 240, 0.8);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   transition: all 0.3s ease;
+  position: relative;
+}
+
+/* WebSocket 状态指示器样式 */
+.ws-status-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
 }
 
 .search-container:hover {
