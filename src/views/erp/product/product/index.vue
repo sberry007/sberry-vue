@@ -109,11 +109,6 @@
         prop="minPrice"
         :formatter="erpPriceTableColumnFormatter" width="100"
       />
-      <el-table-column label="状态" align="center" prop="status" width="80">
-        <template #default="scope">
-          <dict-tag :type="DICT_TYPE.COMMON_STATUS" :value="scope.row.status" />
-        </template>
-      </el-table-column>
       <el-table-column
         label="创建时间"
         align="center"
@@ -121,8 +116,21 @@
         :formatter="dateFormatter"
         width="220px"
       />
-      <el-table-column label="操作" align="center" width="160" fixed="right">
+      <el-table-column label="状态" align="center" prop="status" width="70" fixed="right">
         <template #default="scope">
+          <dict-tag :type="DICT_TYPE.COMMON_STATUS" :value="scope.row.status" />
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" width="200" fixed="right">
+        <template #default="scope">
+          <el-button
+            link
+            type="primary"
+            @click="openForm('view', scope.row.id)"
+            v-hasPermi="['erp:product:query']"
+          >
+            查看详情
+          </el-button>
           <el-button
             link
             type="primary"
