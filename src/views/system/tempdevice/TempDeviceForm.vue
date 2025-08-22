@@ -13,7 +13,17 @@
           placeholder="请输入设备名称" 
           maxlength="50"
           show-word-limit
-        />
+        >
+          <template #suffix>
+            <el-tooltip content="点击快速填充设备名称" placement="top">
+              <Icon 
+                icon="ep:magic-stick" 
+                class="quick-fill-icon" 
+                @click="quickFillDeviceName"
+              />
+            </el-tooltip>
+          </template>
+        </el-input>
       </el-form-item>
       
       <!-- 添加设备说明 -->
@@ -117,6 +127,17 @@ const submitForm = async () => {
   }
 }
 
+/** 生成随机三位数 */
+const generateRandomNumber = () => {
+  return Math.floor(Math.random() * 900) + 100 // 生成100-999的随机数
+}
+
+/** 快速填充设备名称 */
+const quickFillDeviceName = () => {
+  const presetName = `温控设备${generateRandomNumber()}`
+  formData.value.name = presetName
+}
+
 /** 重置表单 */
 const resetForm = () => {
   formData.value = {
@@ -130,6 +151,21 @@ const resetForm = () => {
 <style scoped>
 .form-tips {
   margin: 16px 0;
+}
+
+.quick-fill-icon {
+  cursor: pointer;
+  color: #909399;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.quick-fill-icon:hover {
+  color: #409eff;
+  background-color: rgba(64, 158, 255, 0.1);
+  transform: scale(1.1);
 }
 
 .form-tips :deep(.el-alert__content) {

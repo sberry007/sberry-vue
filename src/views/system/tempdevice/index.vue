@@ -80,54 +80,57 @@
 
   <!-- 搜索工作栏 -->
   <ContentWrap>
-    <el-form
-      class="-mb-15px"
-      :model="queryParams"
-      ref="queryFormRef"
-      :inline="true"
-      label-width="68px"
-    >
-      <el-form-item label="设备名称" prop="name">
-        <el-input
-          v-model="queryParams.name"
-          placeholder="请输入设备名称"
-          clearable
-          @keyup.enter="handleQuery"
-          class="!w-240px"
-        />
-      </el-form-item>
-      <el-form-item label="创建时间" prop="createTime">
-        <el-date-picker
-          v-model="queryParams.createTime"
-          value-format="YYYY-MM-DD HH:mm:ss"
-          type="datetimerange"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"
-          class="!w-280px"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button @click="handleQuery"><Icon icon="ep:search" class="mr-5px" /> 搜索</el-button>
-        <el-button @click="resetQuery"><Icon icon="ep:refresh" class="mr-5px" /> 重置</el-button>
-        <el-button
-          type="primary"
-          plain
-          @click="openForm('create')"
-          v-hasPermi="['system:temp-device:create']"
-        >
-          <Icon icon="ep:plus" class="mr-5px" /> 新增设备
-        </el-button>
-        <el-button
-          type="success"
-          plain
-          @click="openFormWithPresetName"
-          v-hasPermi="['system:temp-device:create']"
-        >
-          <Icon icon="ep:magic-stick" class="mr-5px" /> 快速创建
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <div class="search-container">
+      <el-form
+        class="search-form"
+        :model="queryParams"
+        ref="queryFormRef"
+        :inline="true"
+        label-width="68px"
+      >
+        <div class="search-row">
+           <div class="search-inputs">
+             <el-form-item label="设备名称" prop="name" class="search-item">
+               <el-input
+                 v-model="queryParams.name"
+                 placeholder="请输入设备名称"
+                 clearable
+                 @keyup.enter="handleQuery"
+                 class="search-input"
+                 prefix-icon="Search"
+               />
+             </el-form-item>
+             <el-form-item label="创建时间" prop="createTime" class="search-item">
+               <el-date-picker
+                 v-model="queryParams.createTime"
+                 value-format="YYYY-MM-DD HH:mm:ss"
+                 type="datetimerange"
+                 start-placeholder="开始日期"
+                 end-placeholder="结束日期"
+                 :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"
+                 class="search-date-picker"
+               />
+             </el-form-item>
+           </div>
+           <div class="search-actions">
+            <el-button class="search-btn" @click="handleQuery">
+              <Icon icon="ep:search" class="mr-5px" /> 搜索
+            </el-button>
+            <el-button class="reset-btn" @click="resetQuery">
+              <Icon icon="ep:refresh" class="mr-5px" /> 重置
+            </el-button>
+            <el-button
+              type="primary"
+              class="add-btn"
+              @click="openForm('create')"
+              v-hasPermi="['system:temp-device:create']"
+            >
+              <Icon icon="ep:plus" class="mr-5px" /> 新增设备
+            </el-button>
+          </div>
+        </div>
+      </el-form>
+    </div>
   </ContentWrap>
 
   <!-- 设备卡片列表 -->
@@ -206,7 +209,7 @@
             type="primary"
             size="small"
             @click="openDeviceDetail(device)"
-            v-hasPermi="['system:temp-device:query']"
+            v-hasPermi="['system:temp-device:details']"
           >
             <Icon icon="ep:view" class="mr-5px" /> 详情
           </el-button>
@@ -247,7 +250,7 @@
 </template>
 
 <script setup lang="ts">
-import { dateFormatter, formatDate } from '@/utils/formatTime'
+import { formatDate } from '@/utils/formatTime'
 import { TempDeviceApi, TempDeviceVO } from '@/api/system/tempdevice'
 import TempDeviceForm from './TempDeviceForm.vue'
 import DeviceDetailDialog from './DeviceDetailDialog.vue'
@@ -371,17 +374,6 @@ const handleStatusFilter = (status: string) => {
 /** 添加/修改操作 */
 const openForm = (type: string, id?: number) => {
   formRef.value.open(type, id)
-}
-
-/** 生成随机三位数 */
-const generateRandomNumber = () => {
-  return Math.floor(Math.random() * 900) + 100 // 生成100-999的随机数
-}
-
-/** 快速创建设备（预设名称） */
-const openFormWithPresetName = () => {
-  const presetName = `温控设备${generateRandomNumber()}`
-  formRef.value.open('create', undefined, presetName)
 }
 
 /** 打开设备详情 */
@@ -840,6 +832,216 @@ onMounted(() => {
   
   .device-card {
     padding: 16px;
+  }
+}
+
+/* 搜索框样式优化 */
+.search-container {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
+}
+
+.search-container:hover {
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.search-form {
+  margin: 0;
+}
+
+.search-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.search-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 0;
+  align-items: flex-end;
+}
+
+.search-item {
+  margin-bottom: 0 !important;
+  margin-right: 0 !important;
+}
+
+.search-item .el-form-item__label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.search-input {
+  width: 280px;
+}
+
+.search-input .el-input__wrapper {
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.search-input .el-input__wrapper:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.search-input .el-input__wrapper.is-focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.search-date-picker {
+  width: 320px;
+}
+
+.search-date-picker .el-input__wrapper {
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.search-date-picker .el-input__wrapper:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.search-date-picker .el-input__wrapper.is-focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.search-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  align-items: flex-end;
+  padding-top: 0;
+  border-top: none;
+}
+
+.search-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  color: white;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+}
+
+.search-btn:hover {
+  background: linear-gradient(135deg, #5855eb 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  color: white;
+}
+
+.reset-btn {
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.reset-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
+  transform: translateY(-1px);
+}
+
+.add-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.add-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* 响应式搜索框 */
+@media (max-width: 1200px) {
+  .search-row {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .search-inputs {
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 0;
+  }
+  
+  .search-input,
+  .search-date-picker {
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .search-actions {
+    justify-content: flex-start;
+    align-items: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .search-container {
+    padding: 20px;
+    border-radius: 12px;
+  }
+  
+  .search-actions {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .search-btn,
+  .reset-btn,
+  .add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-container {
+    padding: 16px;
+  }
+  
+  .search-inputs {
+    gap: 12px;
+  }
+  
+  .search-item .el-form-item__label {
+    font-size: 13px;
   }
 }
 </style>
