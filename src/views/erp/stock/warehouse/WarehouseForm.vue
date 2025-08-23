@@ -14,6 +14,16 @@
       <el-form-item label="仓库地址" prop="address">
         <el-input v-model="formData.address" placeholder="请输入仓库地址" />
       </el-form-item>
+      <el-form-item label="仓库类型" prop="type">
+        <el-select v-model="formData.type" placeholder="请选择仓库类型" class="!w-1/1">
+          <el-option
+            v-for="dict in getIntDictOptions(DICT_TYPE.ERP_WAREHOUSE_TYPE)"
+            :key="dict.value"
+            :label="dict.label"
+            :value="dict.value"
+          />
+        </el-select>
+      </el-form-item>
       <el-form-item label="仓库状态" prop="status">
         <el-radio-group v-model="formData.status">
           <el-radio
@@ -83,15 +93,17 @@ const formData = ref({
   id: undefined,
   name: undefined,
   address: undefined,
+  type: undefined,
   sort: undefined,
   remark: undefined,
   principal: undefined,
   warehousePrice: undefined,
   truckagePrice: undefined,
-  status: undefined
+  status: CommonStatusEnum.ENABLE
 })
 const formRules = reactive({
   name: [{ required: true, message: '仓库名称不能为空', trigger: 'blur' }],
+  type: [{ required: true, message: '仓库类型不能为空', trigger: 'change' }],
   sort: [{ required: true, message: '排序不能为空', trigger: 'blur' }],
   status: [{ required: true, message: '开启状态不能为空', trigger: 'blur' }]
 })
@@ -145,6 +157,7 @@ const resetForm = () => {
     id: undefined,
     name: undefined,
     address: undefined,
+    type: undefined,
     sort: undefined,
     remark: undefined,
     principal: undefined,

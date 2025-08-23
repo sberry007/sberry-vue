@@ -149,22 +149,9 @@ export enum DICT_TYPE {
   ERP_PRODUCT_CATEGORY_LEVEL = 'erp_product_category_level', // 产品分类层级
   ERP_PRODUCT_BOM_STATUS = 'erp_product_bom_status', // 产品BOM状态
   ERP_IS_DEFAULT_BOM = 'erp_is_default_bom', // 是否默认BOM
+  ERP_WAREHOUSE_TYPE = 'erp_warehouse_type', // ERP 仓库类型
 
-  // ========== IOT - 物联网模块  ==========
-  IOT_NET_TYPE = 'iot_net_type', // IOT 联网方式
-  IOT_VALIDATE_TYPE = 'iot_validate_type', // IOT 数据校验级别
-  IOT_PRODUCT_STATUS = 'iot_product_status', // IOT 产品状态
-  IOT_PRODUCT_DEVICE_TYPE = 'iot_product_device_type', // IOT 产品设备类型
-  IOT_DATA_FORMAT = 'iot_data_format', // IOT 数据格式
-  IOT_PROTOCOL_TYPE = 'iot_protocol_type', // IOT 接入网关协议
-  IOT_DEVICE_STATE = 'iot_device_state', // IOT 设备状态
-  IOT_THING_MODEL_TYPE = 'iot_thing_model_type', // IOT 产品功能类型
-  IOT_DATA_TYPE = 'iot_data_type', // IOT 数据类型
-  IOT_THING_MODEL_UNIT = 'iot_thing_model_unit', // IOT 物模型单位
-  IOT_RW_TYPE = 'iot_rw_type', // IOT 读写类型
-  IOT_PLUGIN_DEPLOY_TYPE = 'iot_plugin_deploy_type', // IOT 插件部署类型
-  IOT_PLUGIN_STATUS = 'iot_plugin_status', // IOT 插件状态
-  IOT_PLUGIN_TYPE = 'iot_plugin_type', // IOT 插件类型
-  IOT_DATA_BRIDGE_DIRECTION_ENUM = 'iot_data_bridge_direction_enum', // 桥梁方向
-  IOT_DATA_BRIDGE_TYPE_ENUM = 'iot_data_bridge_type_enum' // 桥梁类型
+
+
+
 }
