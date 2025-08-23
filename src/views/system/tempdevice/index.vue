@@ -479,22 +479,17 @@ const handleWebSocketMessage = (data: any) => {
     console.log('收到设备状态变更:', deviceStatus)
     
     // 显示通知消息
-    let statusText = ''
     switch (deviceStatus.statusType) {
       case 'ONLINE':
-        statusText = '上线'
         message.success(`设备 ${deviceStatus.deviceName} 已上线`)
         break
       case 'OFFLINE':
-        statusText = '下线'
         message.warning(`设备 ${deviceStatus.deviceName} 已下线`)
         break
       case 'ACTIVATED':
-        statusText = '激活'
         message.success(`设备 ${deviceStatus.deviceName} 已激活`)
         break
       case 'DEACTIVATED':
-        statusText = '停用'
         message.warning(`设备 ${deviceStatus.deviceName} 已停用`)
         break
     }
