@@ -848,7 +848,7 @@ onUnmounted(() => {
   border: 2px dashed #cbd5e1;
 }
 
-/* IOT设备类型图标 */
+/* 设备类型图标 */
 .device-type-icon {
   position: absolute;
   top: 24px;
