@@ -146,6 +146,7 @@ export enum DICT_TYPE {
   // ========== ERP - 企业资源计划模块  ==========
   ERP_AUDIT_STATUS = 'erp_audit_status', // ERP 审批状态
   ERP_STOCK_RECORD_BIZ_TYPE = 'erp_stock_record_biz_type', // 库存明细的业务类型
+  ERP_WAREHOUSE_TYPE = 'erp_warehouse_type', // ERP 仓库类型
 
 
 
