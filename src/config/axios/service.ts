@@ -18,8 +18,6 @@ import { deleteUserCache } from '@/hooks/web/useCache'
 import { useMessage } from '@/hooks/web/useMessage'
 import { useI18n } from '@/hooks/web/useI18n'
 
-const message = useMessage()
-
 const tenantEnable = import.meta.env.VITE_APP_TENANT_ENABLE
 const { result_code, base_url, request_timeout } = config
 
@@ -170,9 +168,11 @@ service.interceptors.response.use(
         })
       }
     } else if (code === 500) {
+      const message = useMessage()
       message.error(t('sys.api.errMsg500'))
       return Promise.reject(new Error(msg))
     } else if (code === 901) {
+      const message = useMessage()
       message.error(
         `${t('sys.api.errMsg901')} 参考 https://doc.sberry.cloud/ 教程，5 分钟搭建本地环境`
       )
@@ -193,6 +193,7 @@ service.interceptors.response.use(
         
         // 任何页面都显示提示框
         try {
+          const message = useMessage()
           await message.alertError(msg)
         } catch {
           // 用户关闭提示框也视为确认
@@ -255,6 +256,7 @@ service.interceptors.response.use(
         console.log(msg)
         return handleAuthorized()
       } else {
+        const message = useMessage()
         message.error(msg)
       }
       return Promise.reject('error')
@@ -273,6 +275,7 @@ service.interceptors.response.use(
     } else if (errMsg.includes('Request failed with status code')) {
       errMsg = t('sys.api.apiRequestFailed') + errMsg.substr(errMsg.length - 3)
     }
+    const message = useMessage()
     message.error(errMsg)
     return Promise.reject(error)
   }

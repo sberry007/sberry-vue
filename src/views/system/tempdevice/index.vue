@@ -81,18 +81,6 @@
   <!-- 搜索工作栏 -->
   <ContentWrap>
     <div class="search-container">
-      <!-- WebSocket 连接状态指示器 -->
-      <div class="ws-status-indicator">
-        <el-tag 
-          :type="wsConnected ? 'success' : 'danger'" 
-          size="small"
-          effect="dark"
-        >
-          <Icon :icon="wsConnected ? 'ep:connection' : 'ep:close'" class="mr-5px" />
-          {{ wsConnected ? '实时推送已连接' : '实时推送已断开' }}
-        </el-tag>
-      </div>
-      
       <el-form
         class="search-form"
         :model="queryParams"
@@ -101,45 +89,42 @@
         label-width="68px"
       >
         <div class="search-row">
-           <div class="search-inputs">
-             <el-form-item label="设备名称" prop="name" class="search-item">
-               <el-input
-                 v-model="queryParams.name"
-                 placeholder="请输入设备名称"
-                 clearable
-                 @keyup.enter="handleQuery"
-                 class="search-input"
-                 prefix-icon="Search"
-               />
-             </el-form-item>
-             <el-form-item label="创建时间" prop="createTime" class="search-item">
-               <el-date-picker
-                 v-model="queryParams.createTime"
-                 value-format="YYYY-MM-DD HH:mm:ss"
-                 type="datetimerange"
-                 start-placeholder="开始日期"
-                 end-placeholder="结束日期"
-                 :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"
-                 class="search-date-picker"
-               />
-             </el-form-item>
-           </div>
-           <div class="search-actions">
-            <el-button class="search-btn" @click="handleQuery">
-              <Icon icon="ep:search" class="mr-5px" /> 搜索
-            </el-button>
-            <el-button class="reset-btn" @click="resetQuery">
-              <Icon icon="ep:refresh" class="mr-5px" /> 重置
-            </el-button>
-            <el-button
-              type="primary"
-              class="add-btn"
-              @click="openForm('create')"
-              v-hasPermi="['system:temp-device:create']"
-            >
-              <Icon icon="ep:plus" class="mr-5px" /> 新增设备
-            </el-button>
-          </div>
+          <el-form-item label="设备名称" prop="name" class="search-item">
+            <el-input
+              v-model="queryParams.name"
+              placeholder="请输入设备名称"
+              clearable
+              @keyup.enter="handleQuery"
+              class="search-input"
+              prefix-icon="Search"
+            />
+          </el-form-item>
+          <el-form-item label="创建时间" prop="createTime" class="search-item">
+            <el-date-picker
+              v-model="queryParams.createTime"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              type="datetimerange"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"
+              class="search-date-picker"
+            />
+          </el-form-item>
+
+          <el-button class="search-btn" @click="handleQuery">
+            <Icon icon="ep:search" class="mr-5px" /> 搜索
+          </el-button>
+          <el-button class="reset-btn" @click="resetQuery">
+            <Icon icon="ep:refresh" class="mr-5px" /> 重置
+          </el-button>
+          <el-button
+            type="primary"
+            class="add-btn"
+            @click="openForm('create')"
+            v-hasPermi="['system:temp-device:create']"
+          >
+            <Icon icon="ep:plus" class="mr-5px" /> 新增设备
+          </el-button>
         </div>
       </el-form>
     </div>
@@ -264,18 +249,18 @@
 <script setup lang="ts">
 import { formatDate } from '@/utils/formatTime'
 import { TempDeviceApi, TempDeviceVO } from '@/api/system/tempdevice'
-import { getAccessToken } from '@/utils/auth'
+import { useMessage } from '@/hooks/web/useMessage'
+import { tempDeviceWebSocket, type TempDeviceStatusMessage } from '@/utils/websocket/tempDeviceWebSocket'
 import TempDeviceForm from './TempDeviceForm.vue'
 import DeviceDetailDialog from './DeviceDetailDialog.vue'
 
 /** 温控设备 列表 */
 defineOptions({ name: 'TempDevice' })
 
-const message = useMessage() // 消息弹窗
 const { t } = useI18n() // 国际化
+const message = useMessage()
 
-// WebSocket 连接
-let websocket: WebSocket | null = null
+// WebSocket 连接状态
 const wsConnected = ref(false)
 
 const loading = ref(true) // 列表的加载中
@@ -427,93 +412,76 @@ const formatTime = (time: any) => {
 
 // WebSocket 连接函数
 const connectWebSocket = () => {
-  try {
-    // 获取当前用户的访问令牌
-    const token = getAccessToken()
-    if (!token) {
-      console.warn('未获取到访问令牌，无法建立WebSocket连接')
-      return
-    }
-    const wsUrl = `ws://localhost:58080/system/ws?token=${token}`
-    websocket = new WebSocket(wsUrl)
-    
-    websocket.onopen = () => {
-      console.log('WebSocket 连接已建立')
+  // 设置WebSocket回调函数
+  tempDeviceWebSocket.setCallbacks({
+    onOpen: () => {
       wsConnected.value = true
       message.success('实时推送已连接')
-    }
-    
-    websocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        handleWebSocketMessage(data)
-      } catch (error) {
-        console.error('解析WebSocket消息失败:', error)
-      }
-    }
-    
-    websocket.onclose = () => {
-      console.log('WebSocket 连接已关闭')
+    },
+    onClose: () => {
       wsConnected.value = false
-      // 尝试重连
-      setTimeout(() => {
-        if (!wsConnected.value) {
-          connectWebSocket()
-        }
-      }, 5000)
-    }
-    
-    websocket.onerror = (error) => {
-      console.error('WebSocket 连接错误:', error)
+    },
+    onError: () => {
       wsConnected.value = false
-    }
-  } catch (error) {
-    console.error('创建WebSocket连接失败:', error)
-  }
+    },
+    onTempDeviceStatus: handleTempDeviceStatus
+  })
+  
+  // 连接WebSocket
+  tempDeviceWebSocket.connect()
 }
 
-// 处理WebSocket消息
-const handleWebSocketMessage = (data: any) => {
-  if (data.type === 'temp_device_status') {
-    const deviceStatus = data.content
-    console.log('收到设备状态变更:', deviceStatus)
-    
-    // 显示通知消息
-    switch (deviceStatus.statusType) {
-      case 'ONLINE':
-        message.success(`设备 ${deviceStatus.deviceName} 已上线`)
-        break
-      case 'OFFLINE':
-        message.warning(`设备 ${deviceStatus.deviceName} 已下线`)
-        break
-      case 'ACTIVATED':
-        message.success(`设备 ${deviceStatus.deviceName} 已激活`)
-        break
-      case 'DEACTIVATED':
-        message.warning(`设备 ${deviceStatus.deviceName} 已停用`)
-        break
+
+// 处理温控设备状态消息
+const handleTempDeviceStatus = (deviceStatus: TempDeviceStatusMessage) => {
+  console.log('收到设备状态变更:', deviceStatus)
+  
+  // 使用nextTick确保在Vue更新周期中执行ElMessage
+  nextTick(() => {
+    try {
+      switch (deviceStatus.statusType) {
+        case 'ONLINE':
+          console.log('执行 ElMessage.success')
+          ElMessage.success(`设备 "${deviceStatus.deviceName}" 已上线`)
+          break
+        case 'OFFLINE':
+          console.log('执行 ElMessage.warning')
+          ElMessage.warning(`设备 "${deviceStatus.deviceName}" 已下线`)
+          break
+        case 'ACTIVATED':
+          console.log('执行 ElMessage.success')
+          ElMessage.success(`设备 "${deviceStatus.deviceName}" 已激活`)
+          break
+        case 'DEACTIVATED':
+          console.log('执行 ElMessage.warning')
+          ElMessage.warning(`设备 "${deviceStatus.deviceName}" 已停用`)
+          break
+        default:
+          console.log('未知的状态类型:', deviceStatus.statusType)
+      }
+      console.log('消息提示执行完成')
+    } catch (error) {
+      console.error('消息提示执行出错:', error)
     }
-    
-    // 更新设备列表中对应设备的状态
-    const deviceIndex = list.value.findIndex(device => device.id === deviceStatus.deviceId)
-    if (deviceIndex !== -1) {
-      list.value[deviceIndex].activeStatus = deviceStatus.activeStatus
-      list.value[deviceIndex].onlineStatus = deviceStatus.onlineStatus
-      list.value[deviceIndex].lastSeen = deviceStatus.lastSeen
-    } else {
-      // 如果设备不在当前列表中，刷新列表
-      getList()
-    }
+  })
+  
+  // 更新设备列表中对应设备的状态
+  const deviceIndex = list.value.findIndex(device => device.id === deviceStatus.deviceId)
+  if (deviceIndex !== -1) {
+    list.value[deviceIndex].activeStatus = deviceStatus.activeStatus
+    list.value[deviceIndex].onlineStatus = deviceStatus.onlineStatus
+    // 将时间戳转换为Date对象
+    list.value[deviceIndex].lastSeen = deviceStatus.lastSeen ? new Date(deviceStatus.lastSeen) : undefined
+  } else {
+    // 如果设备不在当前列表中，刷新列表
+    getList()
   }
 }
 
 // 断开WebSocket连接
 const disconnectWebSocket = () => {
-  if (websocket) {
-    websocket.close()
-    websocket = null
-    wsConnected.value = false
-  }
+  tempDeviceWebSocket.disconnect()
+  wsConnected.value = false
 }
 
 /** 初始化 **/
@@ -960,13 +928,7 @@ onUnmounted(() => {
   position: relative;
 }
 
-/* WebSocket 状态指示器样式 */
-.ws-status-indicator {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
-}
+
 
 .search-container:hover {
   box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -980,8 +942,8 @@ onUnmounted(() => {
 .search-row {
   display: flex;
   align-items: flex-end;
-  gap: 20px;
-  flex-wrap: wrap;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
 
 .search-inputs {
@@ -1005,7 +967,7 @@ onUnmounted(() => {
 }
 
 .search-input {
-  width: 280px;
+  width: 200px;
 }
 
 .search-input .el-input__wrapper {
@@ -1027,7 +989,7 @@ onUnmounted(() => {
 }
 
 .search-date-picker {
-  width: 320px;
+  width: 280px;
 }
 
 .search-date-picker .el-input__wrapper {
@@ -1052,9 +1014,14 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   justify-content: flex-start;
-  align-items: flex-end;
-  padding-top: 0;
+  align-items: center;
+  padding-top: 32px;
   border-top: none;
+}
+
+.search-btn, .reset-btn, .add-btn {
+  height: 32px;
+  flex-shrink: 0;
 }
 
 .search-btn {
@@ -1131,6 +1098,7 @@ onUnmounted(() => {
   .search-actions {
     justify-content: flex-start;
     align-items: center;
+    padding-top: 16px;
   }
 }
 
