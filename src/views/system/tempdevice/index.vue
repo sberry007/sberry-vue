@@ -474,7 +474,7 @@ const connectWebSocket = () => {
 
 // 处理WebSocket消息
 const handleWebSocketMessage = (data: any) => {
-  if (data.type === 'TEMP_DEVICE_STATUS') {
+  if (data.type === 'temp_device_status') {
     const deviceStatus = data.content
     console.log('收到设备状态变更:', deviceStatus)
     
