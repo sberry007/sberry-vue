@@ -16,41 +16,41 @@ export interface ProductionStockInVO {
 export const ProductionStockInApi = {
   // 查询ERP 生产入库记录分页
   getProductionStockInPage: async (params: any) => {
-    return await request.get({ url: `/erp-production/stockIn/page`, params })
+    return await request.get({ url: `/erp-production/in/page`, params })
   },
 
   // 查询ERP 生产入库记录详情
   getProductionStockIn: async (id: number) => {
-    return await request.get({ url: `/erp-production/stockIn/get?id=` + id })
+    return await request.get({ url: `/erp-production/in/get?id=` + id })
   },
 
   // 新增ERP 生产入库记录
   createProductionStockIn: async (data: ProductionStockInVO) => {
-    return await request.post({ url: `/erp-production/stockIn/create`, data })
+    return await request.post({ url: `/erp-production/in/create`, data })
   },
 
   // 修改ERP 生产入库记录
   updateProductionStockIn: async (data: ProductionStockInVO) => {
-    return await request.put({ url: `/erp-production/stockIn/update`, data })
+    return await request.put({ url: `/erp-production/in/update`, data })
   },
 
   // 删除ERP 生产入库记录
   deleteProductionStockIn: async (id: number) => {
-    return await request.delete({ url: `/erp-production/stockIn/delete?id=` + id })
+    return await request.delete({ url: `/erp-production/in/delete?id=` + id })
   },
 
   // 导出ERP 生产入库记录 Excel
   exportProductionStockIn: async (params) => {
-    return await request.download({ url: `/erp-production/stockIn/export-excel`, params })
+    return await request.download({ url: `/erp-production/in/export-excel`, params })
   },
 
   // 获取已使用的生产订单ID列表
   getUsedProductionOrderIds: async () => {
-    return await request.get({ url: `/erp-production/stockIn/used-order-ids` })
+    return await request.get({ url: `/erp-production/in/used-order-ids` })
   },
 
   // 更新ERP 生产入库记录状态
   updateProductionStockInStatus: async (id: number, status: number) => {
-    return await request.put({ url: `/erp-production/stockIn/update-status?id=${id}&status=${status}` })
+    return await request.put({ url: `/erp-production/in/update-status?id=${id}&status=${status}` })
   },
 }

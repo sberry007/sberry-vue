@@ -102,7 +102,7 @@
           type="primary"
           plain
           @click="openForm('create')"
-          v-hasPermi="['erp:production-stock-in:create']"
+          v-hasPermi="['erp:production-in:create']"
         >
           <Icon icon="ep:plus" class="mr-5px" /> 新增
         </el-button>
@@ -111,7 +111,7 @@
           plain
           @click="handleExport"
           :loading="exportLoading"
-          v-hasPermi="['erp:production-stock-in:export']"
+          v-hasPermi="['erp:production-in:export']"
         >
           <Icon icon="ep:download" class="mr-5px" /> 导出
         </el-button>
@@ -170,7 +170,7 @@
             link
             type="info"
             @click="openForm('detail', scope.row.id)"
-            v-hasPermi="['erp:production-stock-in:query']"
+            v-hasPermi="['erp:production-in:query']"
           >
             详情
           </el-button>
@@ -178,7 +178,7 @@
             link
             type="primary"
             @click="openForm('update', scope.row.id)"
-            v-hasPermi="['erp:production-stock-in:update']"
+            v-hasPermi="['erp:production-in:update']"
           >
             编辑
           </el-button>
@@ -186,7 +186,7 @@
             link
             type="success"
             @click="handleUpdateStatus(scope.row.id, 20)"
-            v-hasPermi="['erp:production-stock-in:update-status']"
+            v-hasPermi="['erp:production-in:update-status']"
             v-if="scope.row.status == 10"
           >
             审批
@@ -195,7 +195,7 @@
             link
             type="warning"
             @click="handleUpdateStatus(scope.row.id, 10)"
-            v-hasPermi="['erp:production-stock-in:update-status']"
+            v-hasPermi="['erp:production-in:update-status']"
             v-if="scope.row.status === 20"
           >
             反审批
@@ -204,7 +204,7 @@
             link
             type="danger"
             @click="handleDelete(scope.row.id)"
-            v-hasPermi="['erp:production-stock-in:delete']"
+            v-hasPermi="['erp:production-in:delete']"
             :disabled="scope.row.status === 20"
           >
             删除

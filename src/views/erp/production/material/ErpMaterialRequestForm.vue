@@ -10,10 +10,6 @@
       <el-form-item label="订单ID" prop="orderId">
         <el-input v-model="formData.orderId" placeholder="请输入订单ID" :readonly="isReadonly" />
       </el-form-item>
-
-
-
-
       <el-form-item label="物料ID" prop="materialId">
         <el-select
             v-model="formData.materialId"

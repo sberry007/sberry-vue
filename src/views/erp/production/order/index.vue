@@ -110,7 +110,7 @@
           type="primary"
           plain
           @click="openForm('create')"
-          v-hasPermi="['erp-production:epr-production-order:create']"
+          v-hasPermi="['erp:production-order:create']"
         >
           <Icon icon="ep:plus" class="mr-5px" />
           新增
@@ -120,7 +120,7 @@
           plain
           @click="handleExport"
           :loading="exportLoading"
-          v-hasPermi="['erp-production:epr-production-order:export']"
+          v-hasPermi="['erp:production-order:export']"
         >
           <Icon icon="ep:download" class="mr-5px" />
           导出
@@ -164,7 +164,7 @@
           <el-button
             link
             @click="openForm('detail', scope.row.id)"
-            v-hasPermi="['erp-production:epr-production-order:query']"
+            v-hasPermi="['erp:production-order:query']"
           >
             详情
           </el-button>
@@ -172,7 +172,7 @@
             link
             type="primary"
             @click="openForm('update', scope.row.id)"
-            v-hasPermi="['erp-production:epr-production-order:update']"
+            v-hasPermi="['erp:production-order:update']"
             :disabled="scope.row.status === 2"
           >
             编辑
@@ -181,7 +181,7 @@
             link
             type="primary"
             @click="handleUpdateStatus(scope.row.id, 20)"
-            v-hasPermi="['erp-production:epr-production-order:update-status']"
+            v-hasPermi="['erp:production-order:update-status']"
             v-if="scope.row.status === 10"
           >
             审批
@@ -190,7 +190,7 @@
             link
             type="danger"
             @click="handleUpdateStatus(scope.row.id, 10)"
-            v-hasPermi="['erp-production:epr-production-order:update-status']"
+            v-hasPermi="['erp:production-order:update-status']"
             v-if="scope.row.status === 20"
           >
             反审批
@@ -199,7 +199,7 @@
             link
             type="danger"
             @click="handleDelete(scope.row.id)"
-            v-hasPermi="['erp-production:epr-production-order:delete']"
+            v-hasPermi="['erp:production-order:delete']"
             :disabled="scope.row.status === 2"
           >
             删除
