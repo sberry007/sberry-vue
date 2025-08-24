@@ -205,6 +205,7 @@
             type="danger"
             @click="handleDelete(scope.row.id)"
             v-hasPermi="['erp:production-stock-in:delete']"
+            :disabled="scope.row.status === 20"
           >
             删除
           </el-button>
@@ -349,21 +350,24 @@ const getWarehouseName = (warehouseId: number) => {
   return warehouse ? warehouse.name : '未知仓库'
 }
 
-/** 获得生产订单列表 */
+/** 获得已审批的生产订单列表 */
 const getProductionOrderList = async () => {
   try {
-    // 使用获取已审批订单列表的API，这样可以获取所有订单而不受分页限制
+    // 优先使用专门的已审批订单接口
     productionOrderList.value = await EprProductionOrderApi.getApprovedProductionOrders()
   } catch (error) {
-    console.error('获取生产订单列表失败:', error)
-    // 如果获取已审批订单失败，回退到分页查询
+    console.error('获取已审批生产订单失败，尝试使用分页查询:', error)
+    // 如果专门接口失败，回退到分页查询
     try {
-      productionOrderList.value = await EprProductionOrderApi.getProductionOrderPage({
+      const data = await EprProductionOrderApi.getEprProductionOrderPage({
+        status: 20, // 已审批状态
         pageNo: 1,
-        pageSize: 10000 // 增加页面大小以获取更多订单
-      }).then(data => data.list)
+        pageSize: 1000
+      })
+      productionOrderList.value = data.list
     } catch (fallbackError) {
-      console.error('获取生产订单分页列表也失败:', fallbackError)
+      console.error('获取生产订单列表失败:', fallbackError)
+      message.error('获取生产订单列表失败，请刷新页面重试')
       productionOrderList.value = []
     }
   }

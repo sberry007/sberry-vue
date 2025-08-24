@@ -44,4 +44,9 @@ export const MaterialRequestApi = {
   exportMaterialRequest: async (params) => {
     return await request.download({ url: `/erp-production/materialRequest/export-excel`, params })
   },
+
+  // 更新ERP 物料请求状态（审批/反审批）
+  updateMaterialRequestStatus: async (id: number, status: number) => {
+    return await request.put({ url: `/erp-production/materialRequest/update-status?id=${id}&status=${status}` })
+  },
 }

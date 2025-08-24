@@ -78,7 +78,13 @@
     </ContentWrap>
 
     <ContentWrap>
-      <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true">
+      <el-table 
+        v-loading="loading" 
+        :data="list" 
+        :show-overflow-tooltip="true" 
+        :stripe="true"
+        empty-text="暂无可用的销售订单，所有销售订单可能已被关联或不满足生产条件"
+      >
         <el-table-column align="center" width="65">
           <template #default="scope">
             <el-radio

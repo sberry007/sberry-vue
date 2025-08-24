@@ -150,7 +150,6 @@ export enum DICT_TYPE {
   ERP_PRODUCT_CATEGORY_LEVEL = 'erp_product_category_level', // 产品分类层级
   ERP_PRODUCT_BOM_STATUS = 'erp_product_bom_status', // 产品BOM状态
   ERP_IS_DEFAULT_BOM = 'erp_is_default_bom', // 是否默认BOM
-  ERP_PRODUCT_CATEGORY_LEVEL = 'erp_product_category_level', // 产品分类层
 
   // ========== 生产  ==========
   ERP_PRODUCTION_ORDER_STATUS = 'erp_production_order_status', // 生产订单的状态

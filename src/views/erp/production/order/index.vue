@@ -135,13 +135,6 @@
       <!--      <el-table-column label="主键" align="center" prop="id" />-->
       <el-table-column label="订单编号" align="center" prop="orderNo" width="180" />
       <el-table-column label="产品信息" align="center" prop="productName" min-width="200" />
-      <el-table-column
-        label="计划生产数量"
-        align="center"
-        prop="plannedQuantity"
-        :formatter="erpCountTableColumnFormatter"
-        min-width="110"
-      />
       <el-table-column label="仓库" align="center" prop="warehouseName" width="180" />
       <el-table-column label="优先级" align="center" prop="priority">
         <template #default="scope">
@@ -163,7 +156,7 @@
       />
       <el-table-column label="状态" align="center" fixed="right" width="90" prop="status">
         <template #default="scope">
-          <dict-tag :type="DICT_TYPE.ERP_PRODUCTION_ORDER_STATUS" :value="scope.row.status" />
+          <dict-tag :type="DICT_TYPE.ERP_AUDIT_STATUS" :value="scope.row.status" />
         </template>
       </el-table-column>
       <el-table-column label="操作" align="center" fixed="right" width="220">
@@ -187,18 +180,18 @@
           <el-button
             link
             type="primary"
-            @click="handleUpdateStatus(scope.row.id, 2)"
+            @click="handleUpdateStatus(scope.row.id, 20)"
             v-hasPermi="['erp-production:epr-production-order:update-status']"
-            v-if="scope.row.status === 1"
+            v-if="scope.row.status === 10"
           >
             审批
           </el-button>
           <el-button
             link
             type="danger"
-            @click="handleUpdateStatus(scope.row.id, 1)"
+            @click="handleUpdateStatus(scope.row.id, 10)"
             v-hasPermi="['erp-production:epr-production-order:update-status']"
-            v-if="scope.row.status === 2"
+            v-if="scope.row.status === 20"
           >
             反审批
           </el-button>
@@ -235,7 +228,6 @@ import EprProductionOrderForm from './EprProductionOrderForm.vue'
 import { getDictListByType } from '@/api/system/dict/dict.data'
 import { ProductVO } from '@/api/erp/product/product' // 引入字典数据API
 import { ProductApi } from '@/api/erp/product/product' // 产品API
-import { erpCountTableColumnFormatter } from '@/utils'
 import { WarehouseApi } from '@/api/erp/stock/warehouse'
 import { DICT_TYPE } from '@/utils/dict' // 产品仓库API
 

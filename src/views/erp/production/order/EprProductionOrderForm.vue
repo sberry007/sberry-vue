@@ -17,15 +17,37 @@
         </el-col>
 
         <!-- 关联销售订单 -->
-        <el-col :span="8">
+        <el-col :span="8" v-if="formType !== 'detail'">
           <el-form-item label="关联订单" prop="saleOrderNo">
-            <el-input v-model="formData.saleOrderNo" readonly>
-              <template #append v-if="formType !== 'detail'">
+            <el-input v-model="formData.saleOrderNo" readonly :disabled="addMode === 'manual'">
+              <template #append v-if="formType !== 'detail' && addMode === 'order'">
                 <el-button @click="openSaleOrderEnableList">
                   <Icon icon="ep:search" /> 选择
                 </el-button>
               </template>
             </el-input>
+          </el-form-item>
+        </el-col>
+        
+        <!-- 添加方式选择 -->
+        <el-col :span="8" v-if="formType === 'create'">
+          <el-form-item label="添加方式">
+            <el-radio-group v-model="addMode" @change="handleAddModeChange">
+              <el-radio value="order">关联订单</el-radio>
+              <el-radio value="manual">手动添加</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </el-col>
+        <el-col :span="8" v-if="addMode === 'manual' && (!formData.items || formData.items.length === 0)">
+          <el-form-item label="计划生产数量" prop="plannedQuantity">
+            <el-input-number
+              v-model="formData.plannedQuantity"
+              :min="1"
+              :precision="2"
+              placeholder="请输入计划生产数量"
+              :disabled="formType === 'detail'"
+              class="!w-1/1"
+            />
           </el-form-item>
         </el-col>
         <el-col :span="8">
@@ -37,6 +59,7 @@
               placeholder="选择计划开始日期"
               :disabled="formType === 'detail'"
               class="!w-110"
+              @change="handlePlannedStartDateChange"
             />
           </el-form-item>
         </el-col>
@@ -49,6 +72,7 @@
               placeholder="选择计划结束日期"
               :disabled="formType === 'detail'"
               class="!w-1/1"
+              @change="handlePlannedEndDateChange"
             />
           </el-form-item>
         </el-col>
@@ -97,6 +121,7 @@
               :items="formData.items || []" 
               :disabled="formType === 'detail'"
               :warehouse-list="warehouseList"
+              :add-mode="addMode"
               @update:items="handleItemsUpdate"
             />
           </el-tab-pane>
@@ -182,12 +207,81 @@ const formData = ref<{
 })
 const formRules = reactive({
   // orderNo: [{ required: true, message: '订单编号，唯一标识不能为空', trigger: 'blur' }],
-  plannedQuantity: [{ required: true, message: '计划生产数量不能为空', trigger: 'blur' }],
-  plannedStartDate: [{ required: true, message: '计划开始日期不能为空', trigger: 'blur' }],
-  plannedEndDate: [{ required: true, message: '计划结束日期不能为空', trigger: 'blur' }],
+  plannedStartDate: [
+    { required: true, message: '计划开始日期不能为空', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value && formData.value.plannedEndDate) {
+          const startDate = new Date(value)
+          const endDate = new Date(formData.value.plannedEndDate)
+          if (startDate > endDate) {
+            callback(new Error('计划开始时间不能超过计划结束时间'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  plannedEndDate: [
+    { required: true, message: '计划结束日期不能为空', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value && formData.value.plannedStartDate) {
+          const startDate = new Date(formData.value.plannedStartDate)
+          const endDate = new Date(value)
+          if (startDate > endDate) {
+            callback(new Error('计划结束时间不能早于计划开始时间'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
   warehouseId: [{ required: true, message: '仓库ID，不能为空', trigger: 'blur' }],
   // status: [{ required: true, message: '订单状态（进行中、完成、取消）不能为空', trigger: 'blur' }]
 })
+
+// 添加方式：order-关联订单，manual-手动添加
+const addMode = ref('order')
+
+// 处理添加方式变更
+const handleAddModeChange = (mode: string) => {
+  // 切换模式时清空相关数据
+  if (mode === 'manual') {
+    // 切换到手动添加模式，清空关联订单信息
+    formData.value.saleOrderNo = undefined
+    formData.value.saleOrderId = undefined
+    formData.value.customerId = undefined
+    // 添加一个空行供用户选择产品
+    formData.value.items = [{
+      id: Date.now(),
+      productId: undefined,
+      productName: '',
+      productBarCode: '',
+      productUnitName: '',
+      productPrice: 0,
+      warehouseId: undefined,
+      warehouseName: '',
+      priority: 1,
+      remark: '',
+      count: 0,
+      availableCount: 0
+    }]
+    message.info('已切换到手动添加模式，请手动添加产品')
+  } else {
+    // 切换到关联订单模式，清空手动添加的产品
+    formData.value.items = []
+    message.info('已切换到关联订单模式，请选择销售订单')
+  }
+}
 const formRef = ref() // 表单 Ref
 
 /** 子表的表单 */
@@ -210,7 +304,24 @@ const open = async (type: string, id?: number) => {
   
   // 在创建模式下，设置默认状态为"待生产"（值为10）
   if (type === 'create') {
-    formData.value.status = 1
+    formData.value.status = 10
+    // 如果是手动添加模式，添加一个空行
+    if (addMode.value === 'manual') {
+      formData.value.items = [{
+        id: Date.now(),
+        productId: undefined,
+        productName: '',
+        productBarCode: '',
+        productUnitName: '',
+        productPrice: 0,
+        warehouseId: undefined,
+        warehouseName: '',
+        priority: 1,
+        remark: '',
+        count: 0,
+        availableCount: 0
+      }]
+    }
   }
 
   // 修改时，设置数据
@@ -246,6 +357,26 @@ const open = async (type: string, id?: number) => {
             }
           }
           
+          // 获取订单数量和可生产数量
+          let orderCount = 0
+          let availableCount = 0
+          
+          // 如果有关联的销售订单，从销售订单项中获取数量信息
+            if (formData.value.saleOrderId) {
+              try {
+                const saleOrderItems = await EprProductionOrderApi.getSaleOrderItemsByOrderId(formData.value.saleOrderId)
+                if (saleOrderItems && saleOrderItems.length > 0) {
+                  const orderItem = saleOrderItems.find(item => item.productId === formData.value.productId)
+                  if (orderItem) {
+                    orderCount = parseFloat(orderItem.count) || 0
+                    availableCount = orderCount - (parseFloat(orderItem.outCount) || 0)
+                  }
+                }
+              } catch (error) {
+                console.error('获取销售订单项信息失败:', error)
+              }
+            }
+          
           // 构建当前生产订单的产品项
           formData.value.items = [{
             productId: formData.value.productId,
@@ -253,10 +384,10 @@ const open = async (type: string, id?: number) => {
             productBarCode: product?.barCode || '',
             productUnitName: unitName,
             productPrice: product?.salePrice || 0, // 产品单价字段
-            count: formData.value.plannedQuantity || 0, // 订单数量字段
+            count: orderCount, // 订单数量字段
+            availableCount: availableCount, // 可生产数量字段
             warehouseId: formData.value.warehouseId,
             priority: formData.value.priority || 1,
-            plannedQuantity: formData.value.plannedQuantity || 0,
             remark: formData.value.remark || ''
           }]
         } catch (error) {
@@ -268,10 +399,10 @@ const open = async (type: string, id?: number) => {
             productBarCode: '',
             productUnitName: '',
             productPrice: 0, // 产品单价字段
-            count: formData.value.plannedQuantity || 0, // 订单数量字段
+            count: 0, // 订单数量字段
+            availableCount: 0, // 可生产数量字段
             warehouseId: formData.value.warehouseId,
             priority: formData.value.priority || 1,
-            plannedQuantity: formData.value.plannedQuantity || 0,
             remark: formData.value.remark || ''
           }]
         }
@@ -302,6 +433,15 @@ const submitForm = async () => {
   // 提交请求
   formLoading.value = true
   try {
+    // 验证子表单的订单数量
+    if (itemFormRef.value && itemFormRef.value.validateCounts) {
+      const isCountsValid = itemFormRef.value.validateCounts()
+      if (!isCountsValid) {
+        formLoading.value = false
+        return
+      }
+    }
+    
     if (formType.value === 'create') {
       // 检查是否有关联销售订单且包含多个产品
       if (formData.value.saleOrderId && formData.value.items && formData.value.items.length > 1) {
@@ -313,8 +453,15 @@ const submitForm = async () => {
             message.error(`产品 ${item.productName} 的仓库不能为空`)
             return
           }
-          if (!item.plannedQuantity || item.plannedQuantity <= 0) {
-            message.error(`产品 ${item.productName} 的计划生产数量不能为空且必须大于0`)
+          if (!item.count || item.count <= 0) {
+            message.error(`产品 ${item.productName} 的订单数量不能为空且必须大于0`)
+            return
+          }
+          // 验证订单数量不能超过可生产数量
+          const count = parseFloat(item.count) || 0
+          const availableCount = parseFloat(item.availableCount) || 0
+          if (count > availableCount && availableCount > 0) {
+            message.error(`产品 ${item.productName} 的订单数量(${count})不能超过可生产数量(${availableCount})`)
             return
           }
           
@@ -322,9 +469,9 @@ const submitForm = async () => {
             saleOrderId: formData.value.saleOrderId,
             productId: item.productId,
             warehouseId: item.warehouseId,
-            plannedQuantity: item.plannedQuantity,
+            plannedQuantity: item.count, // 计划生产数量
             priority: item.priority || 1, // 默认普通优先级
-            status: formData.value.status || 1, // 默认待生产状态
+            status: formData.value.status || 10, // 默认待生产状态
             plannedStartDate: formData.value.plannedStartDate,
             plannedEndDate: formData.value.plannedEndDate,
             remark: item.remark || formData.value.remark
@@ -345,17 +492,20 @@ const submitForm = async () => {
         // 校验表单
         await formRef.value.validate()
         
-        // 如果有子表单数据且只有一个产品，从子表单中获取仓库信息
+        // 如果有子表单数据且只有一个产品，从子表单中获取产品和仓库信息
         if (formData.value.items && formData.value.items.length === 1) {
           const item = formData.value.items[0]
+          if (item.productId) {
+            formData.value.productId = item.productId
+          }
           if (item.warehouseId) {
             formData.value.warehouseId = item.warehouseId
           }
-          if (item.plannedQuantity) {
-            formData.value.plannedQuantity = item.plannedQuantity
-          }
           if (item.priority !== undefined) {
             formData.value.priority = item.priority
+          }
+          if (item.count !== undefined) {
+            formData.value.plannedQuantity = item.count
           }
         }
         
@@ -442,7 +592,7 @@ const handleSaleOrderChange = async (order: any) => {
   formData.value.customerId = order.customerId
 
   // 设置默认状态为"待生产"（值为10）
-  formData.value.status = 1
+  formData.value.status = 10
 
   // 填充产品清单
   if (order.items && order.items.length > 0) {
@@ -458,20 +608,32 @@ const handleSaleOrderChange = async (order: any) => {
     }
 
     // 填充产品清单，包含产品详细信息，并为每个产品项初始化独立的字段
-    formData.value.items = order.items.map(item => {
+    formData.value.items = await Promise.all(order.items.map(async item => {
       const product = productMap.get(item.productId)
+      
+      // 获取产品单位名称
+      let unitName = product?.unitName || ''
+      if (!unitName && product?.unitId) {
+        try {
+          const unit = await ProductUnitApi.getProductUnit(product.unitId)
+          unitName = unit?.name || ''
+        } catch (error) {
+          console.error('获取产品单位信息失败:', error)
+        }
+      }
+      
       return {
         ...item,
         productName: product?.name || '未知产品',
         productBarCode: product?.barCode || '',
-        productUnitName: product?.unitName || '',
+        productUnitName: unitName,
+        productPrice: product?.salePrice || product?.price || 0, // 添加产品单价
         availableCount: (item.count || 0) - (item.outCount || 0),
         warehouseId: undefined,
         priority: undefined,
-        plannedQuantity: '',
         remark: item.remark || '' // 保留销售订单中的备注内容
       }
-    })
+    }))
     console.log('填充后的产品清单:', formData.value.items)
   }
   
@@ -481,7 +643,6 @@ const handleSaleOrderChange = async (order: any) => {
     formData.value.productId = item.productId
     // 计划数量 = 订单数量 - 已出库数量（可用于生产的数量）
     const availableQuantity = item.count - (item.outCount || 0)
-    formData.value.plannedQuantity = availableQuantity > 0 ? availableQuantity : item.count
     // 设置仓库ID，如果销售订单项中有仓库信息则使用，否则保持当前选择
     if (item.warehouseId) {
       formData.value.warehouseId = item.warehouseId
@@ -489,12 +650,27 @@ const handleSaleOrderChange = async (order: any) => {
   } else if (order.items && order.items.length > 1) {
     // 如果有多个产品，清空产品选择，系统将自动为每个产品创建独立的生产订单
     formData.value.productId = undefined
-    formData.value.plannedQuantity = undefined
   }
   
   message.success('已关联销售订单：' + order.no)
 }
 
+
+/** 处理计划开始日期变更 */
+const handlePlannedStartDateChange = () => {
+  // 触发计划结束日期的验证
+  nextTick(() => {
+    formRef.value?.validateField('plannedEndDate')
+  })
+}
+
+/** 处理计划结束日期变更 */
+const handlePlannedEndDateChange = () => {
+  // 触发计划开始日期的验证
+  nextTick(() => {
+    formRef.value?.validateField('plannedStartDate')
+  })
+}
 
 /** 重置表单 */
 const resetForm = () => {

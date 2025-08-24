@@ -17,14 +17,21 @@
           class="!w-240px"
         />
       </el-form-item>
-      <el-form-item label="物料ID" prop="materialId">
-        <el-input
-          v-model="queryParams.materialId"
-          placeholder="请输入物料ID"
-          clearable
-          @keyup.enter="handleQuery"
-          class="!w-240px"
-        />
+      <el-form-item label="物料" prop="materialId">
+        <el-select
+            v-model="queryParams.materialId"
+            clearable
+            filterable
+            placeholder="请选择物料"
+            class="!w-240px"
+        >
+          <el-option
+              v-for="item in materialList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+          />
+        </el-select>
       </el-form-item>
 <!--      <el-form-item label="状态" prop="status">-->
 <!--        <el-select-->
@@ -86,12 +93,12 @@
   <ContentWrap>
     <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true">
 <!--      <el-table-column label="主键" align="center" prop="id" />-->
-      <el-table-column label="订单编号" align="center" prop="orderId"  width="180"/>
-      <el-table-column label="物料ID" align="center" prop="materialId" width="120" />
+      <el-table-column label="订单编号" align="center" prop="productionOrderNo"  width="180"/>
+      <el-table-column label="物料" align="center" prop="materialName" width="120" />
       <el-table-column label="请求数量" align="center" prop="requestedQuantity" width="120"/>
       <el-table-column label="批准数量" align="center" prop="approvedQuantity" width="120"/>
       <el-table-column label="实际领用数量" align="center" prop="actualQuantity" width="120" />
-<!--      <el-table-column label="状态" align="center" prop="status" />-->
+
       <el-table-column
         label="请求时间"
         align="center"
@@ -113,21 +120,54 @@
         :formatter="dateFormatter"
         width="180px"
       />
-      <el-table-column label="操作" align="center" fixed="right" min-width="120px">
+      <el-table-column label="状态" align="center" prop="status"  fixed="right"   width="90">
         <template #default="scope">
+          <dict-tag :type="DICT_TYPE.ERP_AUDIT_STATUS" :value="scope.row.status" />
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" fixed="right" min-width="220px">
+        <template #default="scope">
+          <el-button
+            link
+            type="info"
+            @click="openForm('detail', scope.row.id)"
+            v-hasPermi="['erp:material-request:query']"
+          >
+            详情
+          </el-button>
           <el-button
             link
             type="primary"
             @click="openForm('update', scope.row.id)"
             v-hasPermi="['erp:material-request:update']"
+            :disabled="scope.row.status === '20'"
           >
             编辑
+          </el-button>
+          <el-button
+            link
+            type="primary"
+            @click="handleUpdateStatus(scope.row.id, 20)"
+            v-hasPermi="['erp:material-request:update-status']"
+            v-if="scope.row.status === '10'"
+          >
+            审批
+          </el-button>
+          <el-button
+            link
+            type="danger"
+            @click="handleUpdateStatus(scope.row.id, 10)"
+            v-hasPermi="['erp:material-request:update-status']"
+            v-if="scope.row.status === '20'"
+          >
+            反审批
           </el-button>
           <el-button
             link
             type="danger"
             @click="handleDelete(scope.row.id)"
             v-hasPermi="['erp:material-request:delete']"
+            :disabled="scope.row.status === '20'"
           >
             删除
           </el-button>
@@ -152,6 +192,8 @@ import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import { MaterialRequestApi, MaterialRequestVO } from '@/api/erp/production/material'
 import ErpMaterialRequestForm from './ErpMaterialRequestForm.vue'
+import { DICT_TYPE } from '@/utils/dict'
+import {ProductApi, ProductVO} from "@/api/erp/product/product";
 
 /** ERP 物料请求 列表 */
 defineOptions({ name: 'ErpMaterialRequest' })
@@ -173,6 +215,8 @@ const queryParams = reactive({
 })
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
+
+const materialList = ref<ProductVO[]>([]) // 物料列表（使用产品作为物料）
 
 /** 查询列表 */
 const getList = async () => {
@@ -204,6 +248,19 @@ const openForm = (type: string, id?: number) => {
   formRef.value.open(type, id)
 }
 
+/** 审批/反审批操作 */
+const handleUpdateStatus = async (id: number, status: number) => {
+  try {
+    // 审批的二次确认
+    await message.confirm(`确定${status === 20 ? '审批' : '反审批'}该物料请求吗？`)
+    // 发起审批
+    await MaterialRequestApi.updateMaterialRequestStatus(id, status)
+    message.success(`${status === 20 ? '审批' : '反审批'}成功`)
+    // 刷新列表
+    await getList()
+  } catch {}
+}
+
 /** 删除按钮操作 */
 const handleDelete = async (id: number) => {
   try {
@@ -233,7 +290,9 @@ const handleExport = async () => {
 }
 
 /** 初始化 **/
-onMounted(() => {
-  getList()
+onMounted(async () => {
+  await getList()
+  // 加载物料列表（只显示原材料类型的产品）
+  materialList.value = await ProductApi.getProductSimpleListByType('RM')
 })
 </script>

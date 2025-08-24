@@ -8,35 +8,49 @@
       v-loading="formLoading"
     >
       <el-form-item label="订单ID" prop="orderId">
-        <el-input v-model="formData.orderId" placeholder="请输入订单ID" />
+        <el-input v-model="formData.orderId" placeholder="请输入订单ID" :readonly="isReadonly" />
       </el-form-item>
 
 
 
 
       <el-form-item label="物料ID" prop="materialId">
-        <el-input v-model="formData.materialId" placeholder="请输入物料ID" />
+        <el-select
+            v-model="formData.materialId"
+            clearable
+            filterable
+            placeholder="请选择物料"
+            class="!w-240px"
+        >
+          <el-option
+              v-for="item in materialList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="请求数量" prop="requestedQuantity">
-        <el-input v-model="formData.requestedQuantity" placeholder="请输入请求数量" />
+        <el-input v-model="formData.requestedQuantity" placeholder="请输入请求数量" :readonly="isReadonly" />
       </el-form-item>
       <el-form-item label="批准数量" prop="approvedQuantity">
-        <el-input v-model="formData.approvedQuantity" placeholder="请输入批准数量" />
+        <el-input v-model="formData.approvedQuantity" placeholder="请输入批准数量" :readonly="isReadonly" />
       </el-form-item>
       <el-form-item label="实际领用数量" prop="actualQuantity">
-        <el-input v-model="formData.actualQuantity" placeholder="请输入实际领用数量" />
+        <el-input v-model="formData.actualQuantity" placeholder="请输入实际领用数量" :readonly="isReadonly" />
       </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-radio-group v-model="formData.status">
-          <el-radio value="1">请选择字典生成</el-radio>
-        </el-radio-group>
-      </el-form-item>
+<!--      <el-form-item label="状态" prop="status" v-if="formType !== 'create'">-->
+<!--        <el-radio-group v-model="formData.status" :disabled="isReadonly">-->
+<!--          <el-radio value="1">请选择字典生成</el-radio>-->
+<!--        </el-radio-group>-->
+<!--      </el-form-item>-->
       <el-form-item label="请求时间" prop="requestTime">
         <el-date-picker
           v-model="formData.requestTime"
           type="date"
           value-format="x"
           placeholder="选择请求时间"
+          :readonly="isReadonly"
         />
       </el-form-item>
       <el-form-item label="批准时间" prop="approvalTime">
@@ -45,17 +59,19 @@
           type="date"
           value-format="x"
           placeholder="选择批准时间"
+          :readonly="isReadonly"
         />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="submitForm" type="primary" :disabled="formLoading">确 定</el-button>
-      <el-button @click="dialogVisible = false">取 消</el-button>
+      <el-button v-if="!isReadonly" @click="submitForm" type="primary" :disabled="formLoading">确 定</el-button>
+      <el-button @click="dialogVisible = false">{{ isReadonly ? '关 闭' : '取 消' }}</el-button>
     </template>
   </Dialog>
 </template>
 <script setup lang="ts">
 import { MaterialRequestApi, MaterialRequestVO } from '@/api/erp/production/material'
+import {ProductApi, ProductVO} from "@/api/erp/product/product";
 
 /** ERP 物料请求 表单 */
 defineOptions({ name: 'MaterialRequestForm' })
@@ -66,7 +82,8 @@ const message = useMessage() // 消息弹窗
 const dialogVisible = ref(false) // 弹窗的是否展示
 const dialogTitle = ref('') // 弹窗的标题
 const formLoading = ref(false) // 表单的加载中：1）修改时的数据加载；2）提交的按钮禁用
-const formType = ref('') // 表单的类型：create - 新增；update - 修改
+const formType = ref('') // 表单的类型：create - 新增；update - 修改；detail - 查看详情
+const isReadonly = computed(() => formType.value === 'detail') // 是否只读模式
 const formData = ref({
   id: undefined,
   orderId: undefined,
@@ -87,6 +104,8 @@ const formRules = reactive({
 })
 const formRef = ref() // 表单 Ref
 
+const materialList = ref<ProductVO[]>([]) // 物料列表（使用产品作为物料）
+
 /** 打开弹窗 */
 const open = async (type: string, id?: number) => {
   dialogVisible.value = true
@@ -102,6 +121,8 @@ const open = async (type: string, id?: number) => {
       formLoading.value = false
     }
   }
+  // 加载物料列表（只显示原材料类型的产品）
+  materialList.value = await ProductApi.getProductSimpleListByType('RM')
 }
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 
@@ -138,7 +159,7 @@ const resetForm = () => {
     requestedQuantity: undefined,
     approvedQuantity: undefined,
     actualQuantity: undefined,
-    status: undefined,
+    status: formType.value === 'create' ? 10 : undefined, // 创建时默认为未审批状态
     requestTime: undefined,
     approvalTime: undefined,
   }

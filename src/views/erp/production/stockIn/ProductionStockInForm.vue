@@ -107,7 +107,48 @@ const formData = ref({
 const formRules = reactive({
   orderId: [{ required: true, message: '生产订单不能为空', trigger: 'blur' }],
   productId: [{ required: true, message: '入库产品不能为空', trigger: 'blur' }],
-  quantity: [{ required: true, message: '入库数量不能为空', trigger: 'blur' }],
+  quantity: [
+    { required: true, message: '入库数量不能为空', trigger: 'blur' },
+    {
+      validator: async (rule, value, callback) => {
+        if (!value || !formData.value.orderId) {
+          callback()
+          return
+        }
+        
+        const quantity = parseFloat(value) || 0
+        if (quantity <= 0) {
+          callback(new Error('入库数量必须大于0'))
+          return
+        }
+        
+        try {
+          // 获取生产订单详情，包含销售订单项信息
+          const orderDetail = await EprProductionOrderApi.getEprProductionOrder(formData.value.orderId)
+          if (orderDetail && orderDetail.saleOrderId) {
+            // 获取销售订单项信息
+            const saleOrderItems = await EprProductionOrderApi.getSaleOrderItemsByOrderId(orderDetail.saleOrderId)
+            if (saleOrderItems && saleOrderItems.length > 0) {
+              // 找到对应产品的订单项
+              const orderItem = saleOrderItems.find(item => item.productId === formData.value.productId)
+              if (orderItem) {
+                const orderQuantity = parseFloat(orderItem.count) || 0
+                if (quantity > orderQuantity) {
+                  callback(new Error(`入库数量(${quantity})不能超过生产订单数量(${orderQuantity})`))
+                  return
+                }
+              }
+            }
+          }
+          callback()
+        } catch (error) {
+          console.error('验证入库数量失败:', error)
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
   warehouseId: [{ required: true, message: '入库仓库不能为空', trigger: 'blur' }],
   inDate: [{ required: true, message: '入库日期不能为空', trigger: 'blur' }],
   // status: [{ required: true, message: '状态不能为空', trigger: 'blur' }], // 状态字段已隐藏
@@ -150,10 +191,7 @@ const open = async (type: string, id?: number) => {
   dialogTitle.value = type === 'detail' ? '查看详情' : t('action.' + type)
   formType.value = type
   resetForm()
-  // 加载仓库列表
-  await getWarehouseList()
-  // 加载已审批的生产订单列表
-  await getProductionOrderList()
+
   // 修改时，设置数据
   if (id) {
     formLoading.value = true
@@ -177,6 +215,11 @@ const open = async (type: string, id?: number) => {
       formLoading.value = false
     }
   }
+
+
+  // 先加载基础数据，确保数据可用
+  await getWarehouseList()
+  await getProductionOrderList()
 }
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 
@@ -233,6 +276,11 @@ const getProductionOrderList = async () => {
       EprProductionOrderApi.getApprovedProductionOrders(),
       ProductionStockInApi.getUsedProductionOrderIds()
     ])
+
+    console.log('生产订单列表：', orderData)
+    console.log('已使用的生产订单ID：', usedOrderIds)
+
+    // 获取物料请求已审批的生产订单，过滤掉已使用的订单
     
     // 过滤掉已使用的生产订单（编辑模式下保留当前订单）
     if (formType.value === 'update' && formData.value.orderId) {
@@ -244,8 +292,15 @@ const getProductionOrderList = async () => {
         !usedOrderIds.includes(order.id)
       )
     }
+    
+    // 如果没有可用的生产订单，给用户提示
+    if (productionOrderList.value.length === 0 && formType.value === 'create') {
+      message.warning('暂无可用的已审批生产订单，请先创建并审批生产订单')
+    }
   } catch (error) {
     console.error('获取生产订单列表失败:', error)
+    message.error('获取生产订单列表失败，请检查网络连接或联系管理员')
+    productionOrderList.value = []
   }
 }
 
