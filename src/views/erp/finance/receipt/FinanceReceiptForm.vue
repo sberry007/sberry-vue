@@ -178,6 +178,7 @@ const formData = ref({
 })
 const formRules = reactive({
   customerId: [{ required: true, message: '客户不能为空', trigger: 'blur' }],
+  accountId: [{ required: true, message: '收款账户不能为空', trigger: 'blur' }],
   receiptTime: [{ required: true, message: '订单时间不能为空', trigger: 'blur' }]
 })
 const disabled = computed(() => formType.value === 'detail')
