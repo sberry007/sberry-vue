@@ -32,9 +32,9 @@
       <el-form-item label="批准数量" prop="approvedQuantity">
         <el-input v-model="formData.approvedQuantity" placeholder="请输入批准数量" :readonly="isReadonly" />
       </el-form-item>
-      <el-form-item label="实际领用数量" prop="actualQuantity">
-        <el-input v-model="formData.actualQuantity" placeholder="请输入实际领用数量" :readonly="isReadonly" />
-      </el-form-item>
+<!--      <el-form-item label="实际领用数量" prop="actualQuantity">-->
+<!--        <el-input v-model="formData.actualQuantity" placeholder="请输入实际领用数量" :readonly="isReadonly" />-->
+<!--      </el-form-item>-->
 <!--      <el-form-item label="状态" prop="status" v-if="formType !== 'create'">-->
 <!--        <el-radio-group v-model="formData.status" :disabled="isReadonly">-->
 <!--          <el-radio value="1">请选择字典生成</el-radio>-->

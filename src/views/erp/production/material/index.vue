@@ -68,14 +68,14 @@
       <el-form-item>
         <el-button @click="handleQuery"><Icon icon="ep:search" class="mr-5px" /> 搜索</el-button>
         <el-button @click="resetQuery"><Icon icon="ep:refresh" class="mr-5px" /> 重置</el-button>
-        <el-button
-          type="primary"
-          plain
-          @click="openForm('create')"
-          v-hasPermi="['erp:material-request:create']"
-        >
-          <Icon icon="ep:plus" class="mr-5px" /> 新增
-        </el-button>
+<!--        <el-button-->
+<!--          type="primary"-->
+<!--          plain-->
+<!--          @click="openForm('create')"-->
+<!--          v-hasPermi="['erp:material-request:create']"-->
+<!--        >-->
+<!--          <Icon icon="ep:plus" class="mr-5px" /> 新增-->
+<!--        </el-button>-->
         <el-button
           type="success"
           plain
@@ -97,8 +97,7 @@
       <el-table-column label="物料" align="center" prop="materialName" width="120" />
       <el-table-column label="请求数量" align="center" prop="requestedQuantity" width="120"/>
       <el-table-column label="批准数量" align="center" prop="approvedQuantity" width="120"/>
-      <el-table-column label="实际领用数量" align="center" prop="actualQuantity" width="120" />
-
+<!--      <el-table-column label="实际领用数量" align="center" prop="actualQuantity" width="120" />-->
       <el-table-column
         label="请求时间"
         align="center"
@@ -125,31 +124,31 @@
           <dict-tag :type="DICT_TYPE.ERP_AUDIT_STATUS" :value="scope.row.status" />
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" fixed="right" min-width="220px">
+      <el-table-column label="操作" align="center" fixed="right" min-width="120px">
         <template #default="scope">
-          <el-button
-            link
-            type="info"
-            @click="openForm('detail', scope.row.id)"
-            v-hasPermi="['erp:material-request:query']"
-          >
-            详情
-          </el-button>
-          <el-button
-            link
-            type="primary"
-            @click="openForm('update', scope.row.id)"
-            v-hasPermi="['erp:material-request:update']"
-            :disabled="scope.row.status === '20'"
-          >
-            编辑
-          </el-button>
+<!--          <el-button-->
+<!--            link-->
+<!--            type="info"-->
+<!--            @click="openForm('detail', scope.row.id)"-->
+<!--            v-hasPermi="['erp:material-request:query']"-->
+<!--          >-->
+<!--            详情-->
+<!--          </el-button>-->
+<!--          <el-button-->
+<!--            link-->
+<!--            type="primary"-->
+<!--            @click="openForm('update', scope.row.id)"-->
+<!--            v-hasPermi="['erp:material-request:update']"-->
+<!--            :disabled="scope.row.status === '20'"-->
+<!--          >-->
+<!--            编辑-->
+<!--          </el-button>-->
           <el-button
             link
             type="primary"
             @click="handleUpdateStatus(scope.row.id, 20)"
             v-hasPermi="['erp:material-request:update-status']"
-            v-if="scope.row.status === '10'"
+            v-if="scope.row.status === 10"
           >
             审批
           </el-button>
@@ -158,7 +157,7 @@
             type="danger"
             @click="handleUpdateStatus(scope.row.id, 10)"
             v-hasPermi="['erp:material-request:update-status']"
-            v-if="scope.row.status === '20'"
+            v-if="scope.row.status === 20"
           >
             反审批
           </el-button>
