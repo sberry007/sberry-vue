@@ -569,7 +569,7 @@ const checkAndManageWebSocketConnection = async () => {
   }
 }
 
-/** 初始化 **/
+/**初始化**/
 onMounted(() => {
   // 设置WebSocket回调
   warehouseTempWebSocket.setCallbacks({
