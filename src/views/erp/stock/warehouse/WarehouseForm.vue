@@ -293,11 +293,12 @@ const submitWarehouseForm = async () => {
     if (formType.value === 'create') {
       await WarehouseApi.createWarehouse(data)
       message.success(t('common.createSuccess'))
-      dialogVisible.value = false
     } else {
       await WarehouseApi.updateWarehouse(data)
       message.success('仓库信息更新成功')
     }
+    // 关闭对话框
+    dialogVisible.value = false
     // 发送操作成功的事件
     emit('success')
   } finally {

@@ -80,10 +80,16 @@ const openTempDetail = async () => {
       tempChart.value = null
     }
     
-    // 获取历史数据
-    const historyData = await WarehouseApi.getWarehouseTempData(props.warehouse.id, {
+    // 获取历史数据 - 获取最近24小时的数据
+    const endTime = new Date()
+    const startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000)
+    
+    const historyData = await WarehouseApi.getWarehouseTempDataPage({
       pageNo: 1,
-      pageSize: 100
+      pageSize: 100,
+      warehouseId: props.warehouse.id,
+      startTime: startTime.toISOString().slice(0, 19).replace('T', ' '),
+      endTime: endTime.toISOString().slice(0, 19).replace('T', ' ')
     })
     tempHistoryData.value = historyData.list || []
     

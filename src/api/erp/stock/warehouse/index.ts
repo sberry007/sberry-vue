@@ -130,8 +130,8 @@ export const WarehouseApi = {
   },
 
   // 获取仓库温控历史数据
-  getWarehouseTempData: async (warehouseId: number, params?: any) => {
-    return await request.get({ url: `/erp-stock/warehouse-temp/temp-data/page`, params: { ...params, warehouseId } })
+  getWarehouseTempDataHistory: async (params: any) => {
+    return await request.get({ url: `/erp-stock/warehouse-temp/temp-data/history`, params })
   },
 
   // 获取仓库绑定的设备列表
@@ -141,7 +141,7 @@ export const WarehouseApi = {
 
   // 获取仓库最新温控数据
   getWarehouseLatestTempData: async (warehouseId: number) => {
-    return await request.get({ url: `/erp-stock/warehouse-temp/latest-data?warehouseId=${warehouseId}` })
+    return await request.get({ url: `/erp-stock/warehouse-temp/temp-data/latest?warehouseId=${warehouseId}` })
   },
 
   // 获取仓库温控数据分页

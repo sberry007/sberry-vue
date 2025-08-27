@@ -213,8 +213,11 @@ const fetchHistoryData = async () => {
   historyDataLoading.value = true
   try {
     const params = {
-      ...queryParams,
-      warehouseId: props.warehouse.id
+      pageNo: queryParams.pageNo,
+      pageSize: queryParams.pageSize,
+      warehouseId: props.warehouse.id,
+      startTime: queryParams.startTime,
+      endTime: queryParams.endTime
     }
     const result = await WarehouseApi.getWarehouseTempDataPage(params)
     historyData.value = result.list
@@ -223,6 +226,7 @@ const fetchHistoryData = async () => {
     // 更新图表
     updateChart()
   } catch (error) {
+    console.error('获取历史数据失败:', error)
     message.error('获取历史数据失败')
   } finally {
     historyDataLoading.value = false
