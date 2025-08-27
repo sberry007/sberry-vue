@@ -18,6 +18,8 @@ export interface WarehouseVO {
   minTemp?: number // 最低温度阈值
   maxTemp?: number // 最高温度阈值
   lockTimeoutS?: number // 超时锁单时间（秒）
+  createTime?: string // 创建时间
+  updateTime?: string // 更新时间
 }
 
 // 温控设备 VO
@@ -135,5 +137,15 @@ export const WarehouseApi = {
   // 获取仓库绑定的设备列表
   getWarehouseDeviceBindings: async (warehouseId: number) => {
     return await request.get({ url: `/erp-stock/warehouse-temp/device-bindings?warehouseId=${warehouseId}` })
+  },
+
+  // 获取仓库最新温控数据
+  getWarehouseLatestTempData: async (warehouseId: number) => {
+    return await request.get({ url: `/erp-stock/warehouse-temp/latest-data?warehouseId=${warehouseId}` })
+  },
+
+  // 获取仓库温控数据分页
+  getWarehouseTempDataPage: async (params: any) => {
+    return await request.get({ url: `/erp-stock/warehouse-temp/temp-data/page`, params })
   }
 }

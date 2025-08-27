@@ -1,5 +1,4 @@
 import { getAccessToken } from '@/utils/auth'
-import type { WarehouseTempDataVO } from '@/api/erp/stock/warehouse'
 
 /**
  * WebSocket消息类型定义
@@ -182,7 +181,7 @@ export class WarehouseTempWebSocketManager {
         return
       }
 
-      const wsUrl = `ws://localhost:58080/erp-stock/ws/warehouse-temp?token=${token}`
+      const wsUrl = `ws://localhost:58080/erp-stock/ws?token=${token}`
       this.websocket = new WebSocket(wsUrl)
       this.status = WebSocketStatus.CONNECTING
 

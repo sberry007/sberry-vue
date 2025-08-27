@@ -97,14 +97,27 @@
           />
         </template>
       </el-table-column>
-      <el-table-column
-        label="创建时间"
-        align="center"
-        prop="createTime"
-        :formatter="dateFormatter"
-        width="180px"
-      />
-      <el-table-column label="操作" align="center" width="240px">
+      <el-table-column label="实时数据" align="center" width="180px">
+        <template #default="scope">
+          <div v-if="scope.row.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED && scope.row.deviceId">
+            <div v-if="realtimeData[scope.row.id]" class="realtime-data">
+              <div class="temp-data">
+                <el-icon class="data-icon temp-icon"><HotWater /></el-icon>
+                <span>{{ realtimeData[scope.row.id].temperature }}°C</span>
+              </div>
+              <div class="humidity-data">
+                <el-icon class="data-icon humidity-icon"><Drizzling /></el-icon>
+                <span>{{ realtimeData[scope.row.id].humidity }}%</span>
+              </div>
+            </div>
+            <div v-else class="no-data">
+              <span class="text-gray-400">暂无数据</span>
+            </div>
+          </div>
+          <span v-else class="text-gray-400">--</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" width="300px">
         <template #default="scope">
           <el-button
             link
@@ -112,6 +125,14 @@
             @click="handleViewDetail(scope.row.id)"
           >
             <Icon icon="ep:view" class="mr-5px" /> 详情
+          </el-button>
+          <el-button
+            v-if="scope.row.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED && scope.row.deviceId"
+            link
+            type="success"
+            @click="handleViewTempDetail(scope.row)"
+          >
+            <Icon icon="ep:data-analysis" class="mr-5px" /> 温控详情
           </el-button>
           <el-button
             link
@@ -216,12 +237,18 @@
     </template>
   </el-dialog>
 
-  <!-- 仓库详情对话框 -->
-  <WarehouseDetailDialog 
-    v-model="detailDialogVisible" 
-    :warehouse="selectedWarehouse" 
-    @edit="handleEditFromDetail"
-  />
+  <!-- 详情对话框 -->
+    <WarehouseDetailDialog 
+      v-model="detailDialogVisible" 
+      :warehouse="selectedWarehouse"
+      @edit="handleEditFromDetail"
+    />
+    
+    <!-- 温控详情对话框 -->
+    <WarehouseTempHistoryDialog 
+      v-model="tempDetailDialogVisible" 
+      :warehouse="selectedTempWarehouse"
+    />
 
 </template>
 
@@ -231,11 +258,10 @@ import download from '@/utils/download'
 import { WarehouseApi, WarehouseVO, TempDeviceVO, DeviceBindReqVO } from '@/api/erp/stock/warehouse'
 import WarehouseForm from './WarehouseForm.vue'
 import WarehouseDetailDialog from './components/WarehouseDetailDialog.vue'
-import { erpPriceTableColumnFormatter } from '@/utils'
-import { dateFormatter } from '@/utils/formatTime'
-import { Check } from '@element-plus/icons-vue'
-
-
+import WarehouseTempHistoryDialog from './components/WarehouseTempHistoryDialog.vue'
+import { Check, HotWater, Drizzling } from '@element-plus/icons-vue'
+import { warehouseTempWebSocket } from '@/websocket/warehouseTempWebSocket'
+import type { WarehouseTempMessage } from '@/websocket/warehouseTempWebSocket'
 
 // 仓库类型常量
 const WAREHOUSE_TYPE = {
@@ -278,9 +304,12 @@ const bindableDevices = ref<TempDeviceVO[]>([])
 const detailDialogVisible = ref(false)
 const selectedWarehouse = ref<WarehouseVO | null>(null)
 
+// 温控详情对话框相关
+const tempDetailDialogVisible = ref(false)
+const selectedTempWarehouse = ref<WarehouseVO | null>(null)
 
-
-
+// WebSocket 和实时数据相关
+const realtimeData = ref<Record<number, { temperature: number; humidity: number; timestamp: number }>>({})
 
 // 表单验证规则
 const bindDeviceRules = {
@@ -299,6 +328,9 @@ const getList = async () => {
     
     // 获取温控仓库的设备绑定状态
     await updateWarehouseDeviceBindings()
+    
+    // 检查是否需要建立WebSocket连接
+    await checkAndManageWebSocketConnection()
   } finally {
     loading.value = false
   }
@@ -417,6 +449,9 @@ const handleBindDevice = async () => {
     message.success('设备绑定成功')
     bindDeviceDialogVisible.value = false
     await getList()
+    
+    // 绑定设备后检查WebSocket连接并重新订阅
+    await checkAndManageWebSocketConnection()
   } catch (error) {
     message.error('设备绑定失败')
   } finally {
@@ -424,19 +459,7 @@ const handleBindDevice = async () => {
   }
 }
 
-/** 处理设备解绑 */
-const handleUnbindDevice = async (warehouse: WarehouseVO) => {
-  try {
-    await message.confirm(`确认要解绑仓库"${warehouse.name}"的温控设备吗？`)
-    await WarehouseApi.unbindDevice(warehouse.id, warehouse.deviceId!)
-    message.success('设备解绑成功')
-    await getList()
-  } catch (error) {
-    if (error !== 'cancel') {
-      message.error('设备解绑失败')
-    }
-  }
-}
+
 
 /** 查看仓库详情 */
 const handleViewDetail = async (warehouseId: number) => {
@@ -459,6 +482,12 @@ const handleViewDetail = async (warehouseId: number) => {
 const handleEditFromDetail = (warehouseId: number) => {
   detailDialogVisible.value = false
   openForm('update', warehouseId)
+}
+
+/** 查看温控详情 */
+const handleViewTempDetail = (warehouse: WarehouseVO) => {
+  selectedTempWarehouse.value = warehouse
+  tempDetailDialogVisible.value = true
 }
 
 
@@ -501,9 +530,67 @@ const updateSingleWarehouseDeviceBinding = async (warehouse: WarehouseVO) => {
   }
 }
 
+/** 检查并管理WebSocket连接 */
+const checkAndManageWebSocketConnection = async () => {
+  // 获取所有温控仓库
+  const tempControlledWarehouses = list.value.filter(warehouse => 
+    warehouse.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED
+  )
+  
+  if (tempControlledWarehouses.length === 0) {
+    warehouseTempWebSocket.disconnect()
+    return
+  }
+  
+  // 检查每个温控仓库是否有绑定设备
+  const warehousesWithDevices: WarehouseVO[] = []
+  for (const warehouse of tempControlledWarehouses) {
+    try {
+      const bindings = await WarehouseApi.getWarehouseDeviceBindings(warehouse.id)
+      if (bindings && bindings.length > 0) {
+        warehousesWithDevices.push(warehouse)
+      }
+    } catch (error) {
+      console.error(`检查仓库 ${warehouse.name} 设备绑定状态失败:`, error)
+    }
+  }
+  
+  if (warehousesWithDevices.length > 0) {
+    // 有绑定设备的仓库，建立连接并订阅
+    if (!warehouseTempWebSocket.isConnected()) {
+      warehouseTempWebSocket.connect()
+    }
+    
+    // 订阅所有需要的仓库
+    const warehouseIds = warehousesWithDevices.map(warehouse => warehouse.id)
+    warehouseTempWebSocket.subscribe(warehouseIds)
+  } else {
+    warehouseTempWebSocket.disconnect()
+  }
+}
+
 /** 初始化 **/
 onMounted(() => {
+  // 设置WebSocket回调
+  warehouseTempWebSocket.setCallbacks({
+    onTempData: (data: WarehouseTempMessage) => {
+      realtimeData.value[data.warehouseId] = {
+        temperature: data.temperature,
+        humidity: data.humidity,
+        timestamp: data.timestamp ? new Date(data.timestamp).getTime() : Date.now()
+      }
+    },
+    onAlarm: (data: WarehouseTempMessage) => {
+      message.warning(`仓库${data.warehouseName}温控报警: ${data.alarmMessage}`)
+    }
+  })
+  
   getList()
+})
+
+/** 组件卸载时断开连接 */
+onUnmounted(() => {
+  warehouseTempWebSocket.disconnect()
 })
 </script>
 
@@ -596,5 +683,35 @@ onMounted(() => {
 .no-devices-tip {
   text-align: center;
   padding: 40px 0;
+}
+
+/* 实时数据样式 */
+.realtime-data {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  
+  .temp-data, .humidity-data {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    
+    .data-icon {
+      font-size: 14px;
+    }
+    
+    .temp-icon {
+      color: #f56c6c;
+    }
+    
+    .humidity-icon {
+      color: #409eff;
+    }
+  }
+}
+
+.no-data {
+  font-size: 12px;
 }
 </style>
