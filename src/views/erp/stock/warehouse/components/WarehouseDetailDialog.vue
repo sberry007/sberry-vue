@@ -24,7 +24,7 @@
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="排序">{{ warehouse.sort }}</el-descriptions-item>
-
+          <el-descriptions-item label="创建时间">{{ warehouse.createTime ? formatDate(new Date(warehouse.createTime)) : '暂无' }}</el-descriptions-item>
           <el-descriptions-item label="备注" :span="2">{{ warehouse.remark || '无' }}</el-descriptions-item>
         </el-descriptions>
       </div>
@@ -66,6 +66,7 @@
 import { ref, computed } from 'vue'
 import { WarehouseVO } from '@/api/erp/stock/warehouse'
 import { erpPriceTableColumnFormatter } from '@/utils'
+import { formatDate } from '@/utils/formatTime'
 
 // 仓库类型常量
 const WAREHOUSE_TYPE = {

@@ -97,13 +97,26 @@
           />
         </template>
       </el-table-column>
-      <el-table-column
-        label="创建时间"
-        align="center"
-        prop="createTime"
-        :formatter="dateFormatter"
-        width="180px"
-      />
+      <el-table-column label="实时数据" align="center" width="180px">
+        <template #default="scope">
+          <div v-if="scope.row.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED && scope.row.deviceId">
+            <div v-if="realtimeData[scope.row.id]" class="realtime-data">
+              <div class="temp-data">
+                <el-icon class="data-icon temp-icon"><HotWater /></el-icon>
+                <span>{{ realtimeData[scope.row.id].temperature }}°C</span>
+              </div>
+              <div class="humidity-data">
+                <el-icon class="data-icon humidity-icon"><Drizzling /></el-icon>
+                <span>{{ realtimeData[scope.row.id].humidity }}%</span>
+              </div>
+            </div>
+            <div v-else class="no-data">
+              <span class="text-gray-400">暂无数据</span>
+            </div>
+          </div>
+          <span v-else class="text-gray-400">--</span>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" width="240px">
         <template #default="scope">
           <el-button
@@ -231,11 +244,7 @@ import download from '@/utils/download'
 import { WarehouseApi, WarehouseVO, TempDeviceVO, DeviceBindReqVO } from '@/api/erp/stock/warehouse'
 import WarehouseForm from './WarehouseForm.vue'
 import WarehouseDetailDialog from './components/WarehouseDetailDialog.vue'
-import { erpPriceTableColumnFormatter } from '@/utils'
-import { dateFormatter } from '@/utils/formatTime'
-import { Check } from '@element-plus/icons-vue'
-
-
+import { Check, HotWater, Drizzling } from '@element-plus/icons-vue'
 
 // 仓库类型常量
 const WAREHOUSE_TYPE = {
@@ -278,9 +287,9 @@ const bindableDevices = ref<TempDeviceVO[]>([])
 const detailDialogVisible = ref(false)
 const selectedWarehouse = ref<WarehouseVO | null>(null)
 
-
-
-
+// WebSocket 和实时数据相关
+const realtimeData = ref<Record<number, { temperature: number; humidity: number; timestamp: number }>>({})
+let websocket: WebSocket | null = null
 
 // 表单验证规则
 const bindDeviceRules = {
@@ -501,9 +510,66 @@ const updateSingleWarehouseDeviceBinding = async (warehouse: WarehouseVO) => {
   }
 }
 
+/** WebSocket 连接管理 */
+const connectWebSocket = () => {
+  if (websocket) {
+    websocket.close()
+  }
+  
+  const wsUrl = `ws://localhost:48080/app-api/erp/warehouse/temp-data/ws`
+  websocket = new WebSocket(wsUrl)
+  
+  websocket.onopen = () => {
+    console.log('WebSocket 连接已建立')
+  }
+  
+  websocket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.warehouseId && data.temperature !== undefined && data.humidity !== undefined) {
+        realtimeData.value[data.warehouseId] = {
+          temperature: parseFloat(data.temperature.toFixed(1)),
+          humidity: parseFloat(data.humidity.toFixed(1)),
+          timestamp: data.timestamp || Date.now()
+        }
+      }
+    } catch (error) {
+      console.error('解析 WebSocket 数据失败:', error)
+    }
+  }
+  
+  websocket.onerror = (error) => {
+    console.error('WebSocket 连接错误:', error)
+  }
+  
+  websocket.onclose = () => {
+    console.log('WebSocket 连接已关闭')
+    // 5秒后尝试重连
+    setTimeout(() => {
+      if (!websocket || websocket.readyState === WebSocket.CLOSED) {
+        connectWebSocket()
+      }
+    }, 5000)
+  }
+}
+
+/** 断开 WebSocket 连接 */
+const disconnectWebSocket = () => {
+  if (websocket) {
+    websocket.close()
+    websocket = null
+  }
+}
+
 /** 初始化 **/
 onMounted(() => {
   getList()
+  connectWebSocket()
+})
+
+/** 组件卸载时断开连接 */
+onUnmounted(() => {
+  disconnectWebSocket()
 })
 </script>
 
@@ -596,5 +662,35 @@ onMounted(() => {
 .no-devices-tip {
   text-align: center;
   padding: 40px 0;
+}
+
+/* 实时数据样式 */
+.realtime-data {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  
+  .temp-data, .humidity-data {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    
+    .data-icon {
+      font-size: 14px;
+    }
+    
+    .temp-icon {
+      color: #f56c6c;
+    }
+    
+    .humidity-icon {
+      color: #409eff;
+    }
+  }
+}
+
+.no-data {
+  font-size: 12px;
 }
 </style>

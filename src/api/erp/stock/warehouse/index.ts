@@ -18,6 +18,8 @@ export interface WarehouseVO {
   minTemp?: number // 最低温度阈值
   maxTemp?: number // 最高温度阈值
   lockTimeoutS?: number // 超时锁单时间（秒）
+  createTime?: string // 创建时间
+  updateTime?: string // 更新时间
 }
 
 // 温控设备 VO
