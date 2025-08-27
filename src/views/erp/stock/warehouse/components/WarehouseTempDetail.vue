@@ -7,7 +7,7 @@
             <span>当前温度</span>
           </template>
           <div class="temp-value">
-            <span class="value">{{ currentTempData?.temperature || '--' }}</span>
+            <span class="value">{{ props.realtimeTempData?.temperature || '--' }}</span>
             <span class="unit">°C</span>
           </div>
         </el-card>
@@ -16,7 +16,7 @@
             <span>当前湿度</span>
           </template>
           <div class="temp-value">
-            <span class="value">{{ currentTempData?.humidity || '--' }}</span>
+            <span class="value">{{ props.realtimeTempData?.humidity || '--' }}</span>
             <span class="unit">%</span>
           </div>
         </el-card>
@@ -39,13 +39,14 @@
 <script setup lang="ts">
 import { ref, nextTick, onUnmounted } from 'vue'
 import { WarehouseApi, type WarehouseVO, type WarehouseTempDataVO } from '@/api/erp/stock/warehouse'
-import { warehouseTempWebSocket, type WarehouseTempMessage } from '@/websocket/warehouseTempWebSocket'
+import type { WarehouseTempMessage } from '@/websocket/warehouseTempWebSocket'
 import * as echarts from 'echarts'
 import type { ECharts } from 'echarts'
 
 interface Props {
   modelValue: boolean
   warehouse: WarehouseVO | null
+  realtimeTempData: WarehouseTempMessage | null
 }
 
 interface Emits {
@@ -61,7 +62,6 @@ const visible = computed({
 })
 
 const message = useMessage()
-const currentTempData = ref<WarehouseTempMessage | null>(null)
 const tempChartRef = ref<HTMLDivElement>()
 const tempChart = ref<ECharts | null>(null)
 const tempHistoryData = ref<WarehouseTempDataVO[]>([])
@@ -71,6 +71,15 @@ const openTempDetail = async () => {
   if (!props.warehouse) return
   
   try {
+    // 清空之前的数据
+    tempHistoryData.value = []
+    
+    // 销毁之前的图表
+    if (tempChart.value) {
+      tempChart.value.dispose()
+      tempChart.value = null
+    }
+    
     // 获取历史数据
     const historyData = await WarehouseApi.getWarehouseTempData(props.warehouse.id, {
       pageNo: 1,
@@ -78,57 +87,49 @@ const openTempDetail = async () => {
     })
     tempHistoryData.value = historyData.list || []
     
+    // 如果有实时数据，添加到历史数据中
+    if (props.realtimeTempData && props.realtimeTempData.warehouseId === props.warehouse.id) {
+      const realtimeDataPoint = {
+        id: Date.now(),
+        warehouseId: props.realtimeTempData.warehouseId,
+        deviceSn: props.realtimeTempData.deviceSn,
+        temperature: props.realtimeTempData.temperature,
+        humidity: props.realtimeTempData.humidity,
+        createTime: new Date(props.realtimeTempData.timestamp).toISOString()
+      }
+      tempHistoryData.value.push(realtimeDataPoint)
+    }
+    
     // 初始化图表
     await nextTick()
     initTempChart()
-    
-    // 订阅实时数据
-    warehouseTempWebSocket.setCallbacks({
-      onTempData: handleRealtimeTempData,
-      onAlarm: handleTempAlarm
-    })
-    
-    if (!warehouseTempWebSocket.isConnected()) {
-      warehouseTempWebSocket.connect()
-    }
-    
-    warehouseTempWebSocket.subscribe([props.warehouse.id])
   } catch (error) {
     message.error('获取温控数据失败')
   }
 }
 
-/** 处理实时温控数据 */
-const handleRealtimeTempData = (data: WarehouseTempMessage) => {
-  if (props.warehouse && data.warehouseId === props.warehouse.id) {
-    currentTempData.value = data
-    
-    // 更新图表数据
-    if (tempChart.value) {
-      const newDataPoint = {
-        id: Date.now(),
-        warehouseId: data.warehouseId,
-        deviceSn: data.deviceSn,
-        temperature: data.temperature,
-        humidity: data.humidity,
-        createTime: new Date(data.timestamp).toISOString()
-      }
-      
-      tempHistoryData.value.push(newDataPoint)
-      // 保持最新100条数据
-      if (tempHistoryData.value.length > 100) {
-        tempHistoryData.value.shift()
-      }
-      
-      updateTempChart()
+/** 处理实时温控数据更新 */
+const handleRealtimeDataUpdate = (data: WarehouseTempMessage) => {
+  if (!data || !props.warehouse || data.warehouseId !== props.warehouse.id) return
+  
+  // 更新图表数据
+  if (tempChart.value) {
+    const newDataPoint = {
+      id: Date.now(),
+      warehouseId: data.warehouseId,
+      deviceSn: data.deviceSn,
+      temperature: data.temperature,
+      humidity: data.humidity,
+      createTime: new Date(data.timestamp).toISOString()
     }
-  }
-}
-
-/** 处理温控报警 */
-const handleTempAlarm = (data: WarehouseTempMessage) => {
-  if (data.alarmMessage) {
-    message.warning(`仓库温控报警: ${data.alarmMessage}`)
+    
+    tempHistoryData.value.push(newDataPoint)
+    // 保持最新100条数据
+    if (tempHistoryData.value.length > 100) {
+      tempHistoryData.value.shift()
+    }
+    
+    updateTempChart()
   }
 }
 
@@ -223,11 +224,6 @@ const updateTempChart = () => {
 
 /** 关闭对话框 */
 const handleClose = () => {
-  // 取消订阅
-  if (props.warehouse) {
-    warehouseTempWebSocket.unsubscribe([props.warehouse.id])
-  }
-  
   // 销毁图表
   if (tempChart.value) {
     tempChart.value.dispose()
@@ -235,7 +231,6 @@ const handleClose = () => {
   }
   
   // 清空数据
-  currentTempData.value = null
   tempHistoryData.value = []
 }
 
@@ -245,6 +240,13 @@ watch(() => props.modelValue, (newVal) => {
     openTempDetail()
   }
 })
+
+// 监听实时数据变化
+watch(() => props.realtimeTempData, (newData) => {
+  if (newData && props.modelValue) {
+    handleRealtimeDataUpdate(newData)
+  }
+}, { deep: true })
 
 // 组件卸载时清理
 onUnmounted(() => {

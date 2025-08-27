@@ -62,12 +62,6 @@
   <ContentWrap>
     <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true">
       <el-table-column label="仓库名称" align="center" prop="name" />
-      <el-table-column label="仓库地址" align="center" prop="address" />
-      <el-table-column label="仓库类型" align="center" prop="warehouseType" width="100px">
-        <template #default="scope">
-          <dict-tag :type="DICT_TYPE.ERP_WAREHOUSE_TYPE" :value="scope.row.warehouseType" />
-        </template>
-      </el-table-column>
       <el-table-column label="绑定设备" align="center" prop="deviceName" width="120px">
         <template #default="scope">
           <span v-if="scope.row.deviceName">{{ scope.row.deviceName }}</span>
@@ -80,24 +74,14 @@
            >
              绑定设备
            </el-button>
-          <span v-else class="text-red-500">无法绑定</span>
+          <span v-else class="text-gray-400">--</span>
         </template>
       </el-table-column>
-      <el-table-column
-        label="仓储费"
-        align="center"
-        prop="warehousePrice"
-        :formatter="erpPriceTableColumnFormatter"
-      />
-      <el-table-column
-        label="搬运费"
-        align="center"
-        prop="truckagePrice"
-        :formatter="erpPriceTableColumnFormatter"
-      />
-      <el-table-column label="负责人" align="center" prop="principal" />
-      <el-table-column label="备注" align="center" prop="remark" />
-      <el-table-column label="排序" align="center" prop="sort" />
+      <el-table-column label="仓库类型" align="center" prop="warehouseType" width="100px">
+        <template #default="scope">
+          <dict-tag :type="DICT_TYPE.ERP_WAREHOUSE_TYPE" :value="scope.row.warehouseType" />
+        </template>
+      </el-table-column>
       <el-table-column label="状态" align="center" prop="status">
         <template #default="scope">
           <dict-tag :type="DICT_TYPE.COMMON_STATUS" :value="scope.row.status" />
@@ -120,41 +104,22 @@
         :formatter="dateFormatter"
         width="180px"
       />
-      <el-table-column label="操作" align="center" width="200px">
+      <el-table-column label="操作" align="center" width="240px">
         <template #default="scope">
+          <el-button
+            link
+            type="info"
+            @click="handleViewDetail(scope.row.id)"
+          >
+            <Icon icon="ep:view" class="mr-5px" /> 详情
+          </el-button>
           <el-button
             link
             type="primary"
             @click="openForm('update', scope.row.id)"
             v-hasPermi="['erp:warehouse:update']"
           >
-            编辑
-          </el-button>
-          <el-button
-            v-if="scope.row.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED && !scope.row.deviceId"
-            link
-            type="success"
-            @click="openBindDeviceDialog(scope.row)"
-            v-hasPermi="['erp:warehouse:bind-device']"
-          >
-            绑定设备
-          </el-button>
-          <el-button
-            v-if="scope.row.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED && scope.row.deviceId"
-            link
-            type="warning"
-            @click="openTempDetailDialog(scope.row)"
-          >
-            温控详情
-          </el-button>
-          <el-button
-            v-if="scope.row.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED && scope.row.deviceId"
-            link
-            type="danger"
-            @click="handleUnbindDevice(scope.row)"
-            v-hasPermi="['erp:warehouse:unbind-device']"
-          >
-            解绑设备
+            <Icon icon="ep:edit" class="mr-5px" /> 编辑
           </el-button>
           <el-button
             link
@@ -162,7 +127,7 @@
             @click="handleDelete(scope.row.id)"
             v-hasPermi="['erp:warehouse:delete']"
           >
-            删除
+            <Icon icon="ep:delete" class="mr-5px" /> 删除
           </el-button>
         </template>
       </el-table-column>
@@ -197,9 +162,9 @@
             @click="selectDevice(device)"
           >
             <div class="device-info">
-               <div class="device-name">{{ device.deviceName }}</div>
+               <div class="device-name">{{ device.name }}</div>
                <div class="device-details">
-                 <span class="device-sn">设备编号: {{ device.deviceSn }}</span>
+                 <span class="device-sn">设备编号: {{ device.sn }}</span>
                  <span class="device-status" :class="device.activeStatus === 1 ? 'online' : 'offline'">
                    {{ device.activeStatus === 1 ? '在线' : '离线' }}
                  </span>
@@ -230,9 +195,9 @@
               </el-form-item>
             </el-col>
           </el-row>
-          <el-form-item label="超时时间" prop="timeoutSeconds">
-            <el-input-number v-model="bindDeviceForm.timeoutSeconds" :min="60" :max="3600" :step="60" style="width: 200px" />
-            <span class="ml-2 text-gray-500">秒（设备离线超时时间）</span>
+          <el-form-item label="超时锁库时间" prop="lockTimeoutS">
+            <el-input-number v-model="bindDeviceForm.lockTimeoutS" :min="60" :max="3600" :step="60" style="width: 200px" />
+            <span class="ml-2 text-gray-500">秒（超时锁单时间）</span>
           </el-form-item>
         </el-form>
       </div>
@@ -251,19 +216,26 @@
     </template>
   </el-dialog>
 
-  <!-- 温控详情对话框 -->
-  <WarehouseTempDetail v-model="tempDetailDialogVisible" :warehouse="selectedWarehouse" />
+  <!-- 仓库详情对话框 -->
+  <WarehouseDetailDialog 
+    v-model="detailDialogVisible" 
+    :warehouse="selectedWarehouse" 
+    @edit="handleEditFromDetail"
+  />
+
 </template>
 
 <script setup lang="ts">
 import { getIntDictOptions, DICT_TYPE } from '@/utils/dict'
-import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import { WarehouseApi, WarehouseVO, TempDeviceVO, DeviceBindReqVO } from '@/api/erp/stock/warehouse'
 import WarehouseForm from './WarehouseForm.vue'
-import WarehouseTempDetail from './components/WarehouseTempDetail.vue'
+import WarehouseDetailDialog from './components/WarehouseDetailDialog.vue'
 import { erpPriceTableColumnFormatter } from '@/utils'
+import { dateFormatter } from '@/utils/formatTime'
 import { Check } from '@element-plus/icons-vue'
+
+
 
 // 仓库类型常量
 const WAREHOUSE_TYPE = {
@@ -296,21 +268,25 @@ const bindDeviceForm = ref<DeviceBindReqVO>({
   deviceId: 0,
   minTemp: 2,
   maxTemp: 8,
-  timeoutSeconds: 300
+  lockTimeoutS: 300
 })
 const bindDeviceFormRef = ref()
 const bindDeviceLoading = ref(false)
 const bindableDevices = ref<TempDeviceVO[]>([])
 
-// 温控详情相关
-const tempDetailDialogVisible = ref(false)
+// 详情对话框相关
+const detailDialogVisible = ref(false)
 const selectedWarehouse = ref<WarehouseVO | null>(null)
+
+
+
+
 
 // 表单验证规则
 const bindDeviceRules = {
   minTemp: [{ required: true, message: '请输入最低温度', trigger: 'blur' }],
   maxTemp: [{ required: true, message: '请输入最高温度', trigger: 'blur' }],
-  timeoutSeconds: [{ required: true, message: '请输入超时时间', trigger: 'blur' }]
+  lockTimeoutS: [{ required: true, message: '请输入超时锁单时间', trigger: 'blur' }]
 }
 
 /** 查询列表 */
@@ -320,6 +296,9 @@ const getList = async () => {
     const data = await WarehouseApi.getWarehousePage(queryParams)
     list.value = data.list
     total.value = data.total
+    
+    // 获取温控仓库的设备绑定状态
+    await updateWarehouseDeviceBindings()
   } finally {
     loading.value = false
   }
@@ -395,7 +374,7 @@ const openBindDeviceDialog = async (warehouse: WarehouseVO) => {
     deviceId: 0,
     minTemp: 2,
     maxTemp: 8,
-    timeoutSeconds: 300
+    lockTimeoutS: 300
   }
   
   // 先打开对话框
@@ -459,10 +438,67 @@ const handleUnbindDevice = async (warehouse: WarehouseVO) => {
   }
 }
 
-/** 打开温控详情对话框 */
-const openTempDetailDialog = (warehouse: WarehouseVO) => {
-  selectedWarehouse.value = warehouse
-  tempDetailDialogVisible.value = true
+/** 查看仓库详情 */
+const handleViewDetail = async (warehouseId: number) => {
+  try {
+    const warehouse = await WarehouseApi.getWarehouse(warehouseId)
+    selectedWarehouse.value = warehouse
+    
+    // 如果是温控仓库，获取设备绑定信息
+    if (warehouse.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED) {
+      await updateSingleWarehouseDeviceBinding(warehouse)
+    }
+    
+    detailDialogVisible.value = true
+  } catch (error) {
+    message.error('获取仓库详情失败')
+  }
+}
+
+/** 从详情对话框编辑仓库 */
+const handleEditFromDetail = (warehouseId: number) => {
+  detailDialogVisible.value = false
+  openForm('update', warehouseId)
+}
+
+
+
+/** 更新仓库设备绑定状态 */
+const updateWarehouseDeviceBindings = async () => {
+  // 遍历所有温控仓库，获取设备绑定状态
+  const tempControlledWarehouses = list.value.filter(warehouse => warehouse.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED)
+  
+  for (const warehouse of tempControlledWarehouses) {
+    await updateSingleWarehouseDeviceBinding(warehouse)
+  }
+}
+
+/** 更新单个仓库设备绑定信息 */
+const updateSingleWarehouseDeviceBinding = async (warehouse: WarehouseVO) => {
+  try {
+    const bindings = await WarehouseApi.getWarehouseDeviceBindings(warehouse.id)
+    if (bindings && bindings.length > 0) {
+      // 如果有绑定设备，更新设备信息
+      const binding = bindings[0] // 假设一个仓库只绑定一个设备
+      warehouse.deviceId = binding.deviceId
+      warehouse.deviceName = binding.deviceName // 直接使用后端返回的设备名称
+      warehouse.minTemp = binding.minTemp
+      warehouse.maxTemp = binding.maxTemp
+      warehouse.lockTimeoutS = binding.lockTimeoutS
+    } else {
+      // 如果没有绑定设备，清空设备信息
+      warehouse.deviceId = undefined
+      warehouse.deviceName = undefined
+      warehouse.minTemp = undefined
+      warehouse.maxTemp = undefined
+      warehouse.lockTimeoutS = undefined
+    }
+  } catch (error) {
+    console.error(`获取仓库 ${warehouse.name} 的设备绑定状态失败:`, error)
+    // 出错时清空设备信息，避免显示错误的绑定状态
+    warehouse.deviceId = undefined
+    warehouse.deviceName = undefined
+  }
 }
 
 /** 初始化 **/
@@ -472,161 +508,93 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 设备绑定对话框样式 */
-.no-devices-tip {
-  text-align: center;
-  padding: 40px 0;
-}
-
 .device-selection-area {
-  margin-bottom: 24px;
-}
-
-.device-selection-area h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.device-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.device-card {
-  border: 2px solid #e4e7ed;
-  border-radius: 8px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-}
-
-.device-card:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
-}
-
-.device-card.selected {
-  border-color: #409eff;
-  background: #f0f9ff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
-}
-
-.device-info {
-  flex: 1;
-}
-
-.device-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 8px;
-}
-
-.device-details {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.device-details span {
-  font-size: 13px;
-  color: #606266;
-}
-
-.device-sn {
-  font-family: 'Courier New', monospace;
-}
-
-.device-status {
-  font-weight: 600;
-}
-
-.device-status.online {
-  color: #67c23a;
-}
-
-.device-status.offline {
-  color: #f56c6c;
-}
-
-.device-select-icon {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #409eff;
-  font-size: 18px;
+  margin-bottom: 20px;
+  
+  h4 {
+    margin-bottom: 12px;
+    color: #303133;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .device-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    
+    .device-card {
+      border: 1px solid #dcdfe6;
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
+      &:hover {
+        border-color: #409eff;
+        box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+      }
+      
+      &.selected {
+        border-color: #409eff;
+        background-color: #f0f9ff;
+      }
+      
+      .device-info {
+        flex: 1;
+        
+        .device-name {
+          font-weight: 600;
+          color: #303133;
+          margin-bottom: 8px;
+        }
+        
+        .device-details {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          
+          .device-sn {
+            font-size: 12px;
+            color: #909399;
+          }
+          
+          .device-status {
+            font-size: 12px;
+            
+            &.online {
+              color: #67c23a;
+            }
+            
+            &.offline {
+              color: #f56c6c;
+            }
+          }
+        }
+      }
+      
+      .device-select-icon {
+        color: #409eff;
+        font-size: 18px;
+      }
+    }
+  }
 }
 
 .temp-config-area {
-  border-top: 1px solid #e4e7ed;
-  padding-top: 24px;
+  h4 {
+    margin-bottom: 16px;
+    color: #303133;
+    font-size: 14px;
+    font-weight: 600;
+  }
 }
 
-.temp-config-area h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-/* 温控详情对话框样式 */
-.temp-detail-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.temp-info-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-.temp-card {
+.no-devices-tip {
   text-align: center;
-}
-
-.temp-value {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 4px;
-}
-
-.temp-value .value {
-  font-size: 32px;
-  font-weight: bold;
-  color: #409eff;
-}
-
-.temp-value .unit {
-  font-size: 16px;
-  color: #909399;
-}
-
-.temp-range {
-  font-size: 18px;
-  font-weight: 600;
-  color: #606266;
-}
-
-.temp-chart-container {
-  height: 400px;
-}
-
-.temp-chart {
-  width: 100%;
-  height: 100%;
+  padding: 40px 0;
 }
 </style>

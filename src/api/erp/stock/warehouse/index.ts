@@ -17,17 +17,18 @@ export interface WarehouseVO {
   deviceName?: string // 绑定的温控设备名称
   minTemp?: number // 最低温度阈值
   maxTemp?: number // 最高温度阈值
-  timeoutSeconds?: number // 超时时间（秒）
+  lockTimeoutS?: number // 超时锁单时间（秒）
 }
 
 // 温控设备 VO
 export interface TempDeviceVO {
   id: number // 设备ID
-  deviceName: string // 设备名称
-  deviceSn: string // 设备序列号
+  name: string // 设备名称
+  sn: string // 设备序列号
   activeStatus: number // 激活状态：0-未激活，1-已激活
-  onlineStatus: number // 在线状态：0-离线，1-在线
+  onlineStatus?: number // 在线状态：0-离线，1-在线
   warehouseId?: number // 绑定的仓库ID
+  clientId?: string // 客户端ID
 }
 
 // 设备绑定请求 VO
@@ -36,7 +37,7 @@ export interface DeviceBindReqVO {
   deviceId: number // 设备ID
   minTemp: number // 最低温度阈值
   maxTemp: number // 最高温度阈值
-  timeoutSeconds: number // 超时时间（秒）
+  lockTimeoutS: number // 超时锁单时间（秒）
 }
 
 // 温控数据 VO
@@ -47,6 +48,20 @@ export interface WarehouseTempDataVO {
   temperature: number // 温度
   humidity: number // 湿度
   createTime: string // 记录时间
+}
+
+// 仓库温控设备绑定响应 VO
+export interface WarehouseTempBindingVO {
+  id: number // 绑定编号
+  deviceId: number // 管理设备ID
+  deviceName: string // 设备名称
+  warehouseId: number // 关联仓库ID
+  minTemp: number // 最小温度范围
+  maxTemp: number // 最大温度范围
+  lockTimeoutS: number // 超时锁单时间(秒)
+  bindTime: string // 绑定时间
+  createTime: string // 创建时间
+  updateTime: string // 更新时间
 }
 
 // ERP 仓库 API
@@ -115,5 +130,10 @@ export const WarehouseApi = {
   // 获取仓库温控历史数据
   getWarehouseTempData: async (warehouseId: number, params?: any) => {
     return await request.get({ url: `/erp-stock/warehouse-temp/temp-data/page`, params: { ...params, warehouseId } })
+  },
+
+  // 获取仓库绑定的设备列表
+  getWarehouseDeviceBindings: async (warehouseId: number) => {
+    return await request.get({ url: `/erp-stock/warehouse-temp/device-bindings?warehouseId=${warehouseId}` })
   }
 }
