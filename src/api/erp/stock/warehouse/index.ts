@@ -12,7 +12,7 @@ export interface WarehouseVO {
   truckagePrice: number // 搬运费，单位：元
   status: number // 开启状态
   defaultStatus: boolean // 是否默认
-  tempEnabled: number // 温控状态：0-未开启，1-已开启
+  warehouseType: number // 温控状态：0-未开启，1-已开启
   deviceId?: number // 绑定的温控设备ID
   deviceName?: string // 绑定的温控设备名称
   minTemp?: number // 最低温度阈值
@@ -99,21 +99,21 @@ export const WarehouseApi = {
 
   // 获取可绑定的温控设备列表
   getBindableDevices: async () => {
-    return await request.get({ url: `/erp-stock/warehouse/bindable-devices` })
+    return await request.get({ url: `/erp-stock/warehouse-temp/bindable-devices` })
   },
 
   // 绑定温控设备
   bindDevice: async (data: DeviceBindReqVO) => {
-    return await request.post({ url: `/erp-stock/warehouse/bind-device`, data })
+    return await request.post({ url: `/erp-stock/warehouse-temp/bind-device`, data })
   },
 
   // 解绑温控设备
-  unbindDevice: async (warehouseId: number) => {
-    return await request.delete({ url: `/erp-stock/warehouse/unbind-device?warehouseId=${warehouseId}` })
+  unbindDevice: async (warehouseId: number, deviceId: number) => {
+    return await request.delete({ url: `/erp-stock/warehouse-temp/unbind-device?warehouseId=${warehouseId}&deviceId=${deviceId}` })
   },
 
   // 获取仓库温控历史数据
   getWarehouseTempData: async (warehouseId: number, params?: any) => {
-    return await request.get({ url: `/erp-stock/warehouse/temp-data/${warehouseId}`, params })
+    return await request.get({ url: `/erp-stock/warehouse-temp/temp-data/page`, params: { ...params, warehouseId } })
   }
 }
