@@ -173,7 +173,7 @@
             type="primary"
             @click="openForm('update', scope.row.id)"
             v-hasPermi="['erp:production-order:update']"
-            :disabled="scope.row.status === 2"
+            :disabled="scope.row.status === 20"
           >
             编辑
           </el-button>

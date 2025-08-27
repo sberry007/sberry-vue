@@ -191,15 +191,15 @@
           >
             审批
           </el-button>
-          <el-button
-            link
-            type="warning"
-            @click="handleUpdateStatus(scope.row.id, 10)"
-            v-hasPermi="['erp:production-in:update-status']"
-            v-if="scope.row.status === 20"
-          >
-            反审批
-          </el-button>
+<!--          <el-button-->
+<!--            link-->
+<!--            type="warning"-->
+<!--            @click="handleUpdateStatus(scope.row.id, 10)"-->
+<!--            v-hasPermi="['erp:production-in:update-status']"-->
+<!--            v-if="scope.row.status === 20"-->
+<!--          >-->
+<!--            反审批-->
+<!--          </el-button>-->
           <el-button
             link
             type="danger"
@@ -230,7 +230,7 @@ import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import { ProductionStockInApi, ProductionStockInVO } from '@/api/erp/production/stockIn'
 import ProductionStockInForm from './ProductionStockInForm.vue'
-import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
+import { DICT_TYPE } from '@/utils/dict'
 import { WarehouseApi, WarehouseVO } from '@/api/erp/stock/warehouse'
 import { EprProductionOrderApi, EprProductionOrderVO } from '@/api/erp/production/order'
 import { ProductApi, ProductVO } from '@/api/erp/product/product'
@@ -362,7 +362,7 @@ const getProductionOrderList = async () => {
       const data = await EprProductionOrderApi.getEprProductionOrderPage({
         status: 20, // 已审批状态
         pageNo: 1,
-        pageSize: 1000
+        pageSize: 10
       })
       productionOrderList.value = data.list
     } catch (fallbackError) {
