@@ -328,9 +328,27 @@ const handleProductionOrderChange = async (orderId: number) => {
       if (selectedOrder.warehouseId) {
         formData.value.warehouseId = selectedOrder.warehouseId
       }
+      
+      // 获取生产订单详情以获取计划生产数量
+      try {
+        const orderDetail = await EprProductionOrderApi.getEprProductionOrder(orderId)
+        if (orderDetail) {
+          // 自动填充入库数量为计划生产数量
+          if (orderDetail.plannedQuantity) {
+            formData.value.quantity = orderDetail.plannedQuantity
+          }
+        }
+      } catch (error) {
+        console.error('获取生产订单详情失败:', error)
+      }
+      
+      // 自动设置入库日期为当前日期
+      formData.value.inDate = new Date().getTime()
     }
   } else {
     formData.value.productId = undefined
+    formData.value.quantity = undefined
+    formData.value.inDate = undefined
     productName.value = ''
   }
 }

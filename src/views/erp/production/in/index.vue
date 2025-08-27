@@ -187,7 +187,7 @@
             type="success"
             @click="handleUpdateStatus(scope.row.id, 20)"
             v-hasPermi="['erp:production-in:update-status']"
-            v-if="scope.row.status == 10"
+            :disabled="scope.row.status == 20"
           >
             审批
           </el-button>
@@ -309,7 +309,7 @@ const handleDelete = async (id: number) => {
 const handleUpdateStatus = async (id: number, status: number) => {
   try {
     // 状态更新的二次确认
-    const statusText = status === 2 ? '审批' : '反审批'
+    const statusText = status === 20 ? '审批' : '反审批'
     await message.confirm(`确定要${statusText}该入库记录吗？`)
     // 发起状态更新
     await ProductionStockInApi.updateProductionStockInStatus(id, status)

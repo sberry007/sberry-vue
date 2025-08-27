@@ -77,9 +77,6 @@
           </el-form-item>
         </el-col>
 
-
-
-
         <!-- 订单状态字段已隐藏 -->
         <!-- <el-col :span="8">
           <el-form-item label="订单状态" prop="status">
@@ -151,7 +148,7 @@ import ProductionOrderSaleOrderEnableList from './components/ProductionOrderSale
 import ProductionOrderItemForm from './components/ProductionOrderItemForm.vue'
 // DictTag组件通过auto-import自动导入，无需手动导入
 
-
+// TODO 手动添加多个产品清单是无法关联仓库
 
 
 /** ERP 生产订单 表单 */
@@ -330,6 +327,13 @@ const open = async (type: string, id?: number) => {
     try {
       formData.value = await EprProductionOrderApi.getEprProductionOrder(id)
       
+      // 根据是否有关联销售订单设置addMode
+      if (formData.value.saleOrderId) {
+        addMode.value = 'order' // 有关联销售订单，设置为关联订单模式
+      } else {
+        addMode.value = 'manual' // 没有关联销售订单，设置为手动添加模式
+      }
+      
       // 在详情或编辑模式下，如果有关联的销售订单，只获取订单号
       if ((type === 'detail' || type === 'update') && formData.value.saleOrderId) {
         try {
@@ -362,20 +366,24 @@ const open = async (type: string, id?: number) => {
           let availableCount = 0
           
           // 如果有关联的销售订单，从销售订单项中获取数量信息
-            if (formData.value.saleOrderId) {
-              try {
-                const saleOrderItems = await EprProductionOrderApi.getSaleOrderItemsByOrderId(formData.value.saleOrderId)
-                if (saleOrderItems && saleOrderItems.length > 0) {
-                  const orderItem = saleOrderItems.find(item => item.productId === formData.value.productId)
-                  if (orderItem) {
-                    orderCount = parseFloat(orderItem.count) || 0
-                    availableCount = orderCount - (parseFloat(orderItem.outCount) || 0)
-                  }
+          if (formData.value.saleOrderId) {
+            try {
+              const saleOrderItems = await EprProductionOrderApi.getSaleOrderItemsByOrderId(formData.value.saleOrderId)
+              if (saleOrderItems && saleOrderItems.length > 0) {
+                const orderItem = saleOrderItems.find(item => item.productId === formData.value.productId)
+                if (orderItem) {
+                  orderCount = parseFloat(orderItem.count) || 0
+                  availableCount = orderCount - (parseFloat(orderItem.outCount) || 0)
                 }
-              } catch (error) {
-                console.error('获取销售订单项信息失败:', error)
               }
+            } catch (error) {
+              console.error('获取销售订单项信息失败:', error)
             }
+          } else {
+            // 手动添加的生产订单，使用plannedQuantity作为订单数量
+            orderCount = parseFloat(formData.value.plannedQuantity) || 0
+            availableCount = orderCount // 手动添加时，可生产数量等于计划数量
+          }
           
           // 构建当前生产订单的产品项
           formData.value.items = [{
@@ -384,8 +392,8 @@ const open = async (type: string, id?: number) => {
             productBarCode: product?.barCode || '',
             productUnitName: unitName,
             productPrice: product?.salePrice || 0, // 产品单价字段
-            count: orderCount, // 订单数量字段
-            availableCount: availableCount, // 可生产数量字段
+            count: String(orderCount), // 确保订单数量是字符串类型
+            availableCount: String(availableCount), // 确保可生产数量是字符串类型
             warehouseId: formData.value.warehouseId,
             priority: formData.value.priority || 1,
             remark: formData.value.remark || ''
