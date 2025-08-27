@@ -250,7 +250,7 @@
 import { formatDate } from '@/utils/formatTime'
 import { TempDeviceApi, TempDeviceVO } from '@/api/system/tempdevice'
 import { useMessage } from '@/hooks/web/useMessage'
-import { tempDeviceWebSocket, type TempDeviceStatusMessage } from '@/utils/websocket/tempDeviceWebSocket'
+import { tempDeviceWebSocket, type TempDeviceStatusMessage } from '@/websocket/tempDeviceWebSocket'
 import TempDeviceForm from './TempDeviceForm.vue'
 import DeviceDetailDialog from './DeviceDetailDialog.vue'
 
