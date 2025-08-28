@@ -22,6 +22,25 @@
               <span class="text-gray-400">暂无数据</span>
             </div>
           </div>
+          
+          <!-- 锁库状态显示 -->
+          <div v-if="lockInfo" class="lock-status-info">
+            <div class="lock-status">
+              <el-icon class="lock-icon"><Lock /></el-icon>
+              <span class="lock-text">仓库已锁定</span>
+            </div>
+            <div class="lock-details">
+              <div class="lock-reason">
+                <span class="lock-label">锁定原因：</span>
+                <span class="lock-value">{{ lockInfo.lockReason }}</span>
+              </div>
+              <div class="lock-time">
+                <span class="lock-label">锁定时间：</span>
+                <span class="lock-value">{{ formatLockTime(lockInfo.lockTime) }}</span>
+              </div>
+            </div>
+          </div>
+          
           <div class="temp-range-info">
             <span class="range-label">温度范围：</span>
             <span class="range-value">{{ warehouse?.minTemp }}°C ~ {{ warehouse?.maxTemp }}°C</span>
@@ -45,15 +64,14 @@
 <script setup lang="ts">
 import { ref, nextTick, onUnmounted, computed, watch } from 'vue'
 import { WarehouseApi, type WarehouseVO, type WarehouseTempDataVO } from '@/api/erp/stock/warehouse'
-import type { WarehouseTempMessage } from '@/websocket/warehouseTempWebSocket'
-import { HotWater, Drizzling } from '@element-plus/icons-vue'
+import { HotWater, Drizzling, Lock } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import type { ECharts } from 'echarts'
 
 interface Props {
   modelValue: boolean
   warehouse: WarehouseVO | null
-  realtimeTempData: { temperature: number; humidity: number; timestamp: number } | null
+  realtimeTempData: { temperature: number; humidity: number; timestamp: number; isLocked?: boolean; lockReason?: string; lockTime?: string } | null
 }
 
 interface Emits {
@@ -76,11 +94,37 @@ const tempHistoryData = ref<WarehouseTempDataVO[]>([])
 // 实时数据
 const realtimeData = ref<{ temperature: number; humidity: number; timestamp: number } | null>(null)
 
+// 锁库信息计算属性
+const lockInfo = computed(() => {
+  if (!props.realtimeTempData?.isLocked) return null
+  return {
+    lockReason: props.realtimeTempData.lockReason || '未知原因',
+    lockTime: props.realtimeTempData.lockTime
+  }
+})
+
 // 查询表单
 const queryForm = ref({
   startTime: '',
   endTime: ''
 })
+
+/** 格式化锁库时间 */
+const formatLockTime = (lockTime?: string) => {
+  if (!lockTime) return '未知时间'
+  try {
+    return new Date(lockTime).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch (error) {
+    return lockTime
+  }
+}
 
 /** 打开温控详情 */
 const openTempDetail = async () => {
@@ -330,6 +374,58 @@ onUnmounted(() => {
 .no-data {
   text-align: center;
   font-size: 14px;
+}
+
+/* 锁库状态样式 */
+.lock-status-info {
+  padding: 16px;
+  background-color: #fef0f0;
+  border: 1px solid #fbc4c4;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.lock-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.lock-icon {
+  font-size: 18px;
+  color: #f56c6c;
+}
+
+.lock-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f56c6c;
+}
+
+.lock-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lock-reason,
+.lock-time {
+  display: flex;
+  align-items: center;
+}
+
+.lock-label {
+  font-size: 14px;
+  color: #909399;
+  margin-right: 8px;
+  min-width: 80px;
+}
+
+.lock-value {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
 }
 
 .temp-range-info {

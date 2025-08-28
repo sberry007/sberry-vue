@@ -311,7 +311,7 @@ const tempDetailDialogVisible = ref(false)
 const selectedTempWarehouse = ref<WarehouseVO | null>(null)
 
 // WebSocket 和实时数据相关
-const realtimeData = ref<Record<number, { temperature: number; humidity: number; timestamp: number }>>({})
+const realtimeData = ref<Record<number, { temperature: number; humidity: number; timestamp: number; isLocked?: boolean; lockReason?: string; lockTime?: string }>>({})
 
 // 表单验证规则
 const bindDeviceRules = {
@@ -586,7 +586,10 @@ onMounted(() => {
       realtimeData.value[data.warehouseId] = {
         temperature: data.temperature,
         humidity: data.humidity,
-        timestamp: data.timestamp ? new Date(data.timestamp).getTime() : Date.now()
+        timestamp: data.timestamp ? new Date(data.timestamp).getTime() : Date.now(),
+        isLocked: data.isLocked,
+        lockReason: data.lockReason,
+        lockTime: data.lockTime
       }
     },
     onAlarm: (data: WarehouseTempMessage) => {

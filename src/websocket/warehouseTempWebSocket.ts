@@ -51,6 +51,9 @@ export interface UnsubscribeMessage {
  * - pushTime: 数据推送时间戳（LocalDateTime格式）
  * - alarmType: 可选，报警类型（高温/低温/超时）
  * - alarmMessage: 可选，报警消息描述
+ * - isLocked: 可选，仓库是否被锁定
+ * - lockReason: 可选，锁库原因
+ * - lockTime: 可选，锁库时间戳（LocalDateTime格式）
  */
 export interface WarehouseTempMessage {
   warehouseId: number
@@ -64,6 +67,9 @@ export interface WarehouseTempMessage {
   pushTime: string // LocalDateTime格式
   alarmType?: 'HIGH_TEMP' | 'LOW_TEMP' | 'TIMEOUT'
   alarmMessage?: string
+  isLocked?: boolean
+  lockReason?: string
+  lockTime?: string // LocalDateTime格式
 }
 
 /**

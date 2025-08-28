@@ -190,10 +190,7 @@
     </div>
     
     <template #footer>
-      <el-button @click="dialogVisible = false">取 消</el-button>
-      <el-button @click="submitWarehouseForm" :loading="formLoading" type="primary">
-        {{ formType === 'create' ? '创 建' : '确 定' }}
-      </el-button>
+      <el-button @click="dialogVisible = false">关 闭</el-button>
     </template>
   </Dialog>
 </template>
