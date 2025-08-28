@@ -152,6 +152,9 @@ export class WarehouseTempWebSocketManager {
   
   /** 已订阅的仓库ID集合，用于重连后恢复订阅 */
   private subscribedWarehouseIds: Set<number> = new Set()
+  
+  /** 待订阅队列，存储连接未建立时的订阅请求 */
+  private pendingSubscriptions: Set<number> = new Set()
 
   /**
    * 构造函数
@@ -219,6 +222,7 @@ export class WarehouseTempWebSocketManager {
     }
     this.status = WebSocketStatus.CLOSED
     this.subscribedWarehouseIds.clear()
+    this.pendingSubscriptions.clear() // 清空待订阅队列
   }
 
   /**
@@ -262,24 +266,22 @@ export class WarehouseTempWebSocketManager {
    * @param warehouseIds 要订阅的仓库ID数组
    */
   subscribe(warehouseIds: number[]): void {
+
+    
+    // 将新的订阅请求添加到待订阅队列
+    warehouseIds.forEach(id => {
+      if (!this.subscribedWarehouseIds.has(id)) {
+        this.pendingSubscriptions.add(id)
+      }
+    })
+    
     if (!this.isConnected()) {
-      console.warn('WebSocket未连接，无法订阅')
+
       return
     }
 
-    const newIds = warehouseIds.filter(id => !this.subscribedWarehouseIds.has(id))
-    if (newIds.length === 0) {
-      return
-    }
-
-    const message: SubscribeMessage = {
-      type: 'subscribe',
-      warehouseIds: newIds
-    }
-
-    this.send(message)
-    newIds.forEach(id => this.subscribedWarehouseIds.add(id))
-    console.log('订阅仓库温控数据:', newIds)
+    // 处理待订阅队列
+    this.processPendingSubscriptions()
   }
 
   /**
@@ -304,14 +306,17 @@ export class WarehouseTempWebSocketManager {
       return
     }
 
-    const message: UnsubscribeMessage = {
-      type: 'unsubscribe',
-      warehouseIds: existingIds
+    const message = {
+      type: 'warehouse_subscribe',
+      content: {
+        type: 'unsubscribe',
+        warehouseIds: existingIds
+      }
     }
 
     this.send(message)
     existingIds.forEach(id => this.subscribedWarehouseIds.delete(id))
-    console.log('取消订阅仓库温控数据:', existingIds)
+
   }
 
   /**
@@ -351,17 +356,23 @@ export class WarehouseTempWebSocketManager {
    * 4. 重新订阅之前订阅的仓库（用于重连后恢复状态）
    */
   private handleOpen(): void {
-    console.log('仓库温控WebSocket连接已建立')
+
     this.status = WebSocketStatus.OPEN
     this.reconnectAttempts = 0
     this.callbacks.onOpen?.()
 
-    // 重新订阅之前的仓库
-    if (this.subscribedWarehouseIds.size > 0) {
-      const warehouseIds = Array.from(this.subscribedWarehouseIds)
-      this.subscribedWarehouseIds.clear()
-      this.subscribe(warehouseIds)
-    }
+    // 使用setTimeout确保连接状态完全稳定后再处理订阅
+    setTimeout(() => {
+      // 重新订阅之前的仓库（重连场景）
+      if (this.subscribedWarehouseIds.size > 0) {
+        const warehouseIds = Array.from(this.subscribedWarehouseIds)
+        this.subscribedWarehouseIds.clear()
+        warehouseIds.forEach(id => this.pendingSubscriptions.add(id))
+      }
+      
+      // 处理待订阅队列
+      this.processPendingSubscriptions()
+    }, 100) // 延迟100ms确保连接状态稳定
   }
 
   /**
@@ -392,7 +403,7 @@ export class WarehouseTempWebSocketManager {
    * 3. 启动自动重连机制（如果符合重连条件）
    */
   private handleClose(): void {
-    console.log('仓库温控WebSocket连接已关闭')
+
     this.status = WebSocketStatus.CLOSED
     this.callbacks.onClose?.()
     this.attemptReconnect()
@@ -425,15 +436,19 @@ export class WarehouseTempWebSocketManager {
    * @param data 解析后的WebSocket消息对象
    */
   private processMessage(data: WebSocketMessage): void {
+
+    
     switch (data.type) {
       case 'warehouse_temp_data': // 匹配后端WebSocketMessageTypeConstants.WAREHOUSE_TEMP_DATA
+
         this.handleTempData(data.content)
         break
       case 'temp_alarm':
+
         this.handleTempAlarm(data.content)
         break
       default:
-        console.warn('未知的消息类型:', data.type)
+        console.warn('[前端WebSocket] 未知的消息类型:', data.type, '完整消息:', data)
     }
   }
 
@@ -441,28 +456,114 @@ export class WarehouseTempWebSocketManager {
    * 处理温控数据消息
    * 
    * 处理从后端推送的仓库温控数据：
-   * 1. 记录接收到的温控数据到控制台
-   * 2. 调用用户定义的onTempData回调函数
+   * 1. 解析JSON字符串格式的温控数据
+   * 2. 记录接收到的温控数据到控制台
+   * 3. 调用用户定义的onTempData回调函数
    * 
-   * @param tempData 温控数据消息对象
+   * @param tempData 温控数据消息对象或JSON字符串
    */
-  private handleTempData(tempData: WarehouseTempMessage): void {
-    console.log('收到仓库温控数据:', tempData)
-    this.callbacks.onTempData?.(tempData)
+  private handleTempData(tempData: WarehouseTempMessage | string): void {
+    let parsedData: WarehouseTempMessage
+    
+    // 如果是字符串，需要解析JSON
+    if (typeof tempData === 'string') {
+      try {
+        parsedData = JSON.parse(tempData)
+
+      } catch (error) {
+        console.error('解析温控数据JSON失败:', error, '原始数据:', tempData)
+        return
+      }
+    } else {
+      parsedData = tempData
+    }
+    
+
+    this.callbacks.onTempData?.(parsedData)
   }
 
   /**
    * 处理温控报警消息
    * 
    * 处理从后端推送的仓库温控报警：
-   * 1. 记录接收到的报警信息到控制台
-   * 2. 调用用户定义的onAlarm回调函数
+   * 1. 解析JSON字符串格式的报警数据
+   * 2. 记录接收到的报警信息到控制台
+   * 3. 调用用户定义的onAlarm回调函数
    * 
-   * @param alarmData 温控报警消息对象
+   * @param alarmData 温控报警消息对象或JSON字符串
    */
-  private handleTempAlarm(alarmData: WarehouseTempMessage): void {
-    console.log('收到仓库温控报警:', alarmData)
-    this.callbacks.onAlarm?.(alarmData)
+  private handleTempAlarm(alarmData: WarehouseTempMessage | string): void {
+    let parsedData: WarehouseTempMessage
+    
+    // 如果是字符串，需要解析JSON
+    if (typeof alarmData === 'string') {
+      try {
+        parsedData = JSON.parse(alarmData)
+
+      } catch (error) {
+        console.error('解析温控报警JSON失败:', error, '原始数据:', alarmData)
+        return
+      }
+    } else {
+      parsedData = alarmData
+    }
+    
+
+    this.callbacks.onAlarm?.(parsedData)
+  }
+
+  /**
+   * 尝试重连
+   * 
+   * 自动重连机制的核心逻辑：
+   * 1. 检查是否已达到最大重连次数限制
+   * 2. 增加重连尝试计数器
+   * 3. 设置延迟定时器，在指定间隔后尝试重连
+   * 4. 重连成功后会自动恢复之前的订阅状态
+   * 
+   * 重连策略：
+   * - 采用固定间隔重连，避免对服务器造成压力
+   * - 有最大重连次数限制，防止无限重连
+   * - 只在连接状态为CLOSED时才执行重连
+   */
+  /**
+   * 处理待订阅队列
+   * 
+   * 处理所有在待订阅队列中的仓库ID：
+   * 1. 检查WebSocket连接状态
+   * 2. 过滤出尚未订阅的仓库ID
+   * 3. 发送订阅消息到后端
+   * 4. 更新订阅状态并清空待订阅队列
+   */
+  private processPendingSubscriptions(): void {
+    if (!this.isConnected() || this.pendingSubscriptions.size === 0) {
+      return
+    }
+
+    const pendingIds = Array.from(this.pendingSubscriptions)
+    const newIds = pendingIds.filter(id => !this.subscribedWarehouseIds.has(id))
+    
+
+    
+    if (newIds.length === 0) {
+      this.pendingSubscriptions.clear()
+      return
+    }
+
+    const message = {
+      type: 'warehouse_subscribe',
+      content: {
+        type: 'subscribe',
+        warehouseIds: newIds
+      }
+    }
+
+
+    this.send(message)
+    newIds.forEach(id => this.subscribedWarehouseIds.add(id))
+    this.pendingSubscriptions.clear()
+    
+
   }
 
   /**
@@ -486,7 +587,7 @@ export class WarehouseTempWebSocketManager {
     }
 
     this.reconnectAttempts++
-    console.log(`仓库温控WebSocket重连中... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`)
+
 
     this.reconnectTimer = setTimeout(() => {
       if (this.status === WebSocketStatus.CLOSED) {
@@ -510,7 +611,7 @@ export class WarehouseTempWebSocketManager {
  * 
  * // 设置回调函数
  * warehouseTempWebSocket.setCallbacks({
- *   onTempData: (data) => console.log('收到温控数据:', data)
+ *   onTempData: (data) => // 处理温控数据
  * })
  * 
  * // 建立连接

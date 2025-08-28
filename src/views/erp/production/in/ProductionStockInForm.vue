@@ -277,8 +277,7 @@ const getProductionOrderList = async () => {
       ProductionStockInApi.getUsedProductionOrderIds()
     ])
 
-    console.log('生产订单列表：', orderData)
-    console.log('已使用的生产订单ID：', usedOrderIds)
+
 
     // 获取物料请求已审批的生产订单，过滤掉已使用的订单
     

@@ -44,12 +44,15 @@ export interface DeviceBindReqVO {
 
 // 温控数据 VO
 export interface WarehouseTempDataVO {
-  id: number
+  id?: number
   warehouseId: number
+  warehouseName?: string
   deviceSn: string // 设备序列号
   temperature: number // 温度
   humidity: number // 湿度
-  createTime: string // 记录时间
+  timestamp: number // 时间戳（毫秒）
+  tenantId?: number
+  clientId?: string
 }
 
 // 仓库温控设备绑定响应 VO
@@ -144,8 +147,8 @@ export const WarehouseApi = {
     return await request.get({ url: `/erp-stock/warehouse-temp/temp-data/latest?warehouseId=${warehouseId}` })
   },
 
-  // 获取仓库温控数据分页
-  getWarehouseTempDataPage: async (params: any) => {
-    return await request.get({ url: `/erp-stock/warehouse-temp/temp-data/page`, params })
+  // 根据时间范围获取仓库温控数据
+  getWarehouseTempDataByTimeRange: async (params: any) => {
+    return await request.get({ url: `/erp-stock/warehouse-temp/temp-data/by-time-range`, params })
   }
 }

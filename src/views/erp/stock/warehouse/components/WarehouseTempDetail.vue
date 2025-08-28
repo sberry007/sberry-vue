@@ -1,52 +1,59 @@
 <template>
   <el-dialog v-model="visible" title="温控详情" width="1000px" @close="handleClose">
     <div class="temp-detail-container">
-      <div class="temp-info-cards">
-        <el-card class="temp-card">
-          <template #header>
-            <span>当前温度</span>
-          </template>
-          <div class="temp-value">
-            <span class="value">{{ props.realtimeTempData?.temperature || '--' }}</span>
-            <span class="unit">°C</span>
+      <!-- 实时数据显示区域 -->
+      <el-card class="realtime-card" shadow="never">
+        <template #header>
+          <span class="font-semibold">实时数据</span>
+        </template>
+        <div class="realtime-content">
+          <div class="realtime-data-display">
+            <div v-if="realtimeData" class="realtime-data">
+              <div class="temp-data">
+                <el-icon class="data-icon temp-icon"><HotWater /></el-icon>
+                <span>{{ realtimeData.temperature }}°C</span>
+              </div>
+              <div class="humidity-data">
+                <el-icon class="data-icon humidity-icon"><Drizzling /></el-icon>
+                <span>{{ realtimeData.humidity }}%</span>
+              </div>
+            </div>
+            <div v-else class="no-data">
+              <span class="text-gray-400">暂无数据</span>
+            </div>
           </div>
-        </el-card>
-        <el-card class="temp-card">
-          <template #header>
-            <span>当前湿度</span>
-          </template>
-          <div class="temp-value">
-            <span class="value">{{ props.realtimeTempData?.humidity || '--' }}</span>
-            <span class="unit">%</span>
+          <div class="temp-range-info">
+            <span class="range-label">温度范围：</span>
+            <span class="range-value">{{ warehouse?.minTemp }}°C ~ {{ warehouse?.maxTemp }}°C</span>
           </div>
-        </el-card>
-        <el-card class="temp-card">
-          <template #header>
-            <span>温度范围</span>
-          </template>
-          <div class="temp-range">
-            <span>{{ warehouse?.minTemp }}°C ~ {{ warehouse?.maxTemp }}°C</span>
-          </div>
-        </el-card>
-      </div>
-      <div class="temp-chart-container">
-        <div ref="tempChartRef" class="temp-chart"></div>
-      </div>
+        </div>
+      </el-card>
+      
+      <!-- 历史数据图表 -->
+      <el-card class="chart-card" shadow="never">
+        <template #header>
+          <span class="font-semibold">近两小时温湿度变化趋势</span>
+        </template>
+        <div class="temp-chart-container">
+          <div ref="tempChartRef" class="temp-chart"></div>
+        </div>
+      </el-card>
     </div>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onUnmounted } from 'vue'
+import { ref, nextTick, onUnmounted, computed, watch } from 'vue'
 import { WarehouseApi, type WarehouseVO, type WarehouseTempDataVO } from '@/api/erp/stock/warehouse'
 import type { WarehouseTempMessage } from '@/websocket/warehouseTempWebSocket'
+import { HotWater, Drizzling } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import type { ECharts } from 'echarts'
 
 interface Props {
   modelValue: boolean
   warehouse: WarehouseVO | null
-  realtimeTempData: WarehouseTempMessage | null
+  realtimeTempData: { temperature: number; humidity: number; timestamp: number } | null
 }
 
 interface Emits {
@@ -66,6 +73,15 @@ const tempChartRef = ref<HTMLDivElement>()
 const tempChart = ref<ECharts | null>(null)
 const tempHistoryData = ref<WarehouseTempDataVO[]>([])
 
+// 实时数据
+const realtimeData = ref<{ temperature: number; humidity: number; timestamp: number } | null>(null)
+
+// 查询表单
+const queryForm = ref({
+  startTime: '',
+  endTime: ''
+})
+
 /** 打开温控详情 */
 const openTempDetail = async () => {
   if (!props.warehouse) return
@@ -73,6 +89,7 @@ const openTempDetail = async () => {
   try {
     // 清空之前的数据
     tempHistoryData.value = []
+    realtimeData.value = null
     
     // 销毁之前的图表
     if (tempChart.value) {
@@ -80,62 +97,32 @@ const openTempDetail = async () => {
       tempChart.value = null
     }
     
-    // 获取历史数据 - 获取最近24小时的数据
-    const endTime = new Date()
-    const startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000)
-    
-    const historyData = await WarehouseApi.getWarehouseTempDataPage({
-      pageNo: 1,
-      pageSize: 100,
-      warehouseId: props.warehouse.id,
-      startTime: startTime.toISOString().slice(0, 19).replace('T', ' '),
-      endTime: endTime.toISOString().slice(0, 19).replace('T', ' ')
-    })
-    tempHistoryData.value = historyData.list || []
-    
-    // 如果有实时数据，添加到历史数据中
-    if (props.realtimeTempData && props.realtimeTempData.warehouseId === props.warehouse.id) {
-      const realtimeDataPoint = {
-        id: Date.now(),
-        warehouseId: props.realtimeTempData.warehouseId,
-        deviceSn: props.realtimeTempData.deviceSn,
+    // 设置实时数据
+    if (props.realtimeTempData) {
+      realtimeData.value = {
         temperature: props.realtimeTempData.temperature,
         humidity: props.realtimeTempData.humidity,
-        createTime: new Date(props.realtimeTempData.timestamp).toISOString()
+        timestamp: props.realtimeTempData.timestamp
       }
-      tempHistoryData.value.push(realtimeDataPoint)
     }
+    
+    // 设置默认查询时间范围为近两小时
+    const now = new Date()
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
+    
+    // 获取历史数据 - 获取最近2小时的数据
+    const historyData = await WarehouseApi.getWarehouseTempDataByTimeRange({
+      warehouseId: props.warehouse.id,
+      hours: 2 // 默认查询2小时
+    })
+    tempHistoryData.value = historyData || []
     
     // 初始化图表
     await nextTick()
     initTempChart()
   } catch (error) {
+    console.error('获取温控数据失败:', error)
     message.error('获取温控数据失败')
-  }
-}
-
-/** 处理实时温控数据更新 */
-const handleRealtimeDataUpdate = (data: WarehouseTempMessage) => {
-  if (!data || !props.warehouse || data.warehouseId !== props.warehouse.id) return
-  
-  // 更新图表数据
-  if (tempChart.value) {
-    const newDataPoint = {
-      id: Date.now(),
-      warehouseId: data.warehouseId,
-      deviceSn: data.deviceSn,
-      temperature: data.temperature,
-      humidity: data.humidity,
-      createTime: new Date(data.timestamp).toISOString()
-    }
-    
-    tempHistoryData.value.push(newDataPoint)
-    // 保持最新100条数据
-    if (tempHistoryData.value.length > 100) {
-      tempHistoryData.value.shift()
-    }
-    
-    updateTempChart()
   }
 }
 
@@ -149,13 +136,37 @@ const initTempChart = () => {
 
 /** 更新温控图表 */
 const updateTempChart = () => {
-  if (!tempChart.value || !tempHistoryData.value.length) return
+  if (!tempChart.value) return
   
-  const times = tempHistoryData.value.map(item => 
-    new Date(item.createTime).toLocaleTimeString()
-  )
+  // 如果没有历史数据，显示空数据提示
+  if (!tempHistoryData.value.length) {
+    const emptyOption = {
+      title: {
+        text: '近两小时温湿度变化趋势',
+        left: 'center'
+      },
+      graphic: {
+        type: 'text',
+        left: 'center',
+        top: 'middle',
+        style: {
+          text: '暂无历史数据',
+          fontSize: 16,
+          fill: '#999'
+        }
+      }
+    }
+    tempChart.value.setOption(emptyOption)
+    return
+  }
+  
+  const times = tempHistoryData.value.map(item => {
+    // 使用timestamp作为时间戳
+    return new Date(item.timestamp).toLocaleTimeString()
+  })
   const temperatures = tempHistoryData.value.map(item => item.temperature)
   const humidities = tempHistoryData.value.map(item => item.humidity)
+  
   
   const option = {
     title: {
@@ -238,6 +249,7 @@ const handleClose = () => {
   
   // 清空数据
   tempHistoryData.value = []
+  realtimeData.value = null
 }
 
 // 监听对话框打开
@@ -249,8 +261,12 @@ watch(() => props.modelValue, (newVal) => {
 
 // 监听实时数据变化
 watch(() => props.realtimeTempData, (newData) => {
-  if (newData && props.modelValue) {
-    handleRealtimeDataUpdate(newData)
+  if (newData) {
+    realtimeData.value = {
+      temperature: newData.temperature,
+      humidity: newData.humidity,
+      timestamp: newData.timestamp
+    }
   }
 }, { deep: true })
 
@@ -267,38 +283,77 @@ onUnmounted(() => {
   gap: 20px;
 }
 
-.temp-info-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+/* 实时数据卡片样式 */
+.realtime-card {
+  margin-bottom: 16px;
+}
+
+.realtime-content {
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
-.temp-card {
-  text-align: center;
-}
-
-.temp-value {
+.realtime-data-display {
   display: flex;
-  align-items: baseline;
   justify-content: center;
-  gap: 4px;
+  align-items: center;
+  min-height: 60px;
 }
 
-.temp-value .value {
-  font-size: 32px;
-  font-weight: bold;
+.realtime-data {
+  display: flex;
+  gap: 40px;
+  align-items: center;
+}
+
+.temp-data, .humidity-data {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.data-icon {
+  font-size: 20px;
+}
+
+.temp-icon {
+  color: #f56c6c;
+}
+
+.humidity-icon {
   color: #409eff;
 }
 
-.temp-value .unit {
-  font-size: 16px;
-  color: #909399;
+.no-data {
+  text-align: center;
+  font-size: 14px;
 }
 
-.temp-range {
-  font-size: 18px;
-  font-weight: 600;
+.temp-range-info {
+  text-align: center;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 6px;
+}
+
+.range-label {
+  font-size: 14px;
+  color: #909399;
+  margin-right: 8px;
+}
+
+.range-value {
+  font-size: 16px;
+  font-weight: 500;
   color: #606266;
+}
+
+/* 图表卡片样式 */
+.chart-card {
+  flex: 1;
 }
 
 .temp-chart-container {

@@ -93,7 +93,7 @@ const open = async (type: string, id?: number) => {
     formLoading.value = true
     try {
       formData.value = await SmsChannelApi.getSmsChannel(id)
-      console.log(formData)
+  
     } finally {
       formLoading.value = false
     }

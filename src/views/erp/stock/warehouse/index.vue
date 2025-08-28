@@ -99,7 +99,7 @@
       </el-table-column>
       <el-table-column label="实时数据" align="center" width="180px">
         <template #default="scope">
-          <div v-if="scope.row.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED && scope.row.deviceId">
+          <div v-if="scope.row.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED">
             <div v-if="realtimeData[scope.row.id]" class="realtime-data">
               <div class="temp-data">
                 <el-icon class="data-icon temp-icon"><HotWater /></el-icon>
@@ -113,6 +113,7 @@
             <div v-else class="no-data">
               <span class="text-gray-400">暂无数据</span>
             </div>
+
           </div>
           <span v-else class="text-gray-400">--</span>
         </template>
@@ -245,9 +246,10 @@
     />
     
     <!-- 温控详情对话框 -->
-    <WarehouseTempHistoryDialog 
+    <WarehouseTempDetail 
       v-model="tempDetailDialogVisible" 
       :warehouse="selectedTempWarehouse"
+      :realtime-temp-data="selectedTempWarehouse ? realtimeData[selectedTempWarehouse.id] : null"
     />
 
 </template>
@@ -258,7 +260,7 @@ import download from '@/utils/download'
 import { WarehouseApi, WarehouseVO, TempDeviceVO, DeviceBindReqVO } from '@/api/erp/stock/warehouse'
 import WarehouseForm from './WarehouseForm.vue'
 import WarehouseDetailDialog from './components/WarehouseDetailDialog.vue'
-import WarehouseTempHistoryDialog from './components/WarehouseTempHistoryDialog.vue'
+import WarehouseTempDetail from './components/WarehouseTempDetail.vue'
 import { Check, HotWater, Drizzling } from '@element-plus/icons-vue'
 import { warehouseTempWebSocket } from '@/websocket/warehouseTempWebSocket'
 import type { WarehouseTempMessage } from '@/websocket/warehouseTempWebSocket'
@@ -547,6 +549,7 @@ const checkAndManageWebSocketConnection = async () => {
   for (const warehouse of tempControlledWarehouses) {
     try {
       const bindings = await WarehouseApi.getWarehouseDeviceBindings(warehouse.id)
+      
       if (bindings && bindings.length > 0) {
         warehousesWithDevices.push(warehouse)
       }
@@ -573,6 +576,12 @@ const checkAndManageWebSocketConnection = async () => {
 onMounted(() => {
   // 设置WebSocket回调
   warehouseTempWebSocket.setCallbacks({
+    onOpen: () => {
+      // 连接建立后，重新执行订阅逻辑
+      setTimeout(() => {
+        checkAndManageWebSocketConnection()
+      }, 50) // 短暂延迟确保连接状态稳定
+    },
     onTempData: (data: WarehouseTempMessage) => {
       realtimeData.value[data.warehouseId] = {
         temperature: data.temperature,
@@ -689,6 +698,7 @@ onUnmounted(() => {
 .realtime-data {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
   
   .temp-data, .humidity-data {

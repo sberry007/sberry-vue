@@ -185,7 +185,7 @@ const handleCurrentChange = (row) => {
 const open = async () => {
   dialogVisible.value = true
   await nextTick() // 等待，避免 queryFormRef 为空
-  console.log('打开弹窗')
+
   // 重置所有查询参数
   queryParams.customerId = undefined
   queryParams.no = undefined
