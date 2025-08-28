@@ -126,7 +126,13 @@
       <!-- 固定列：仓库、优先级、计划生产数量、备注 -->
       <el-table-column label="仓库" min-width="150" fixed="right">
         <template #default="{ row, $index }">
-          <el-form-item class="mb-0px!">
+          <el-form-item 
+            class="mb-0px!"
+            :prop="`${$index}.warehouseId`"
+            :rules="[
+              { required: true, message: '请选择仓库', trigger: 'change' }
+            ]"
+          >
             <el-select
               v-model="row.warehouseId"
               placeholder="请选择仓库"
@@ -181,6 +187,20 @@
               @input="(value) => handleRemarkChange($index, value)"
             />
           </el-form-item>
+        </template>
+      </el-table-column>
+      
+      <el-table-column label="操作" width="80" fixed="right" v-if="!disabled && props.addMode === 'manual'">
+        <template #default="{ $index }">
+          <el-button 
+            type="danger" 
+            size="small" 
+            @click="deleteRow($index)"
+            :disabled="formData.length <= 1"
+            title="删除行"
+          >
+            <Icon icon="ep:delete" />
+          </el-button>
         </template>
       </el-table-column>
     </el-table>

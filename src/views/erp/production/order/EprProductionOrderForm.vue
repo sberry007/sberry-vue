@@ -148,8 +148,6 @@ import ProductionOrderSaleOrderEnableList from './components/ProductionOrderSale
 import ProductionOrderItemForm from './components/ProductionOrderItemForm.vue'
 // DictTag组件通过auto-import自动导入，无需手动导入
 
-// TODO 手动添加多个产品清单是无法关联仓库
-
 
 /** ERP 生产订单 表单 */
 defineOptions({ name: 'EprProductionOrderForm' })
@@ -451,8 +449,8 @@ const submitForm = async () => {
     }
     
     if (formType.value === 'create') {
-      // 检查是否有关联销售订单且包含多个产品
-      if (formData.value.saleOrderId && formData.value.items && formData.value.items.length > 1) {
+      // 检查是否有关联销售订单且包含多个产品（仅限关联订单模式）
+      if (addMode.value === 'order' && formData.value.saleOrderId && formData.value.items && formData.value.items.length > 1) {
         // 一对一拆分：为每个产品创建一个独立的生产订单
         const createdOrders = []
         for (const item of formData.value.items) {
@@ -484,7 +482,50 @@ const submitForm = async () => {
             plannedEndDate: formData.value.plannedEndDate,
             remark: item.remark || formData.value.remark
           }
+
+          console.log('创建生产订单时的数据:', orderData)
+
+          try {
+            const orderId = await EprProductionOrderApi.createEprProductionOrder(orderData)
+            createdOrders.push(orderId)
+          } catch (error) {
+            console.error(`创建产品 ${item.productName} 的生产订单失败:`, error)
+            message.error(`创建产品 ${item.productName} 的生产订单失败`)
+            return
+          }
+        }
+        message.success(`成功创建 ${createdOrders.length} 个生产订单`)
+      } else if (addMode.value === 'manual' && formData.value.items && formData.value.items.length > 1) {
+        // 手动添加模式下的多个产品处理：为每个产品创建独立的生产订单
+        const createdOrders = []
+        for (const item of formData.value.items) {
+          // 验证必填字段
+          if (!item.productId) {
+            message.error(`请选择产品`)
+            return
+          }
+          if (!item.warehouseId) {
+            message.error(`产品 ${item.productName} 的仓库不能为空`)
+            return
+          }
+          if (!item.count || parseFloat(item.count) <= 0) {
+            message.error(`产品 ${item.productName} 的订单数量不能为空且必须大于0`)
+            return
+          }
           
+          const orderData = {
+            productId: item.productId,
+            warehouseId: item.warehouseId,
+            plannedQuantity: parseFloat(item.count), // 计划生产数量
+            priority: item.priority || 1, // 默认普通优先级
+            status: formData.value.status || 10, // 默认待生产状态
+            plannedStartDate: formData.value.plannedStartDate,
+            plannedEndDate: formData.value.plannedEndDate,
+            remark: item.remark || formData.value.remark
+          }
+
+          console.log('手动添加模式创建生产订单时的数据:', orderData)
+
           try {
             const orderId = await EprProductionOrderApi.createEprProductionOrder(orderData)
             createdOrders.push(orderId)
