@@ -77,9 +77,6 @@
           </el-form-item>
         </el-col>
 
-
-
-
         <!-- 订单状态字段已隐藏 -->
         <!-- <el-col :span="8">
           <el-form-item label="订单状态" prop="status">
@@ -150,8 +147,6 @@ import { SaleOrderApi } from '@/api/erp/sale/order' // 引入销售订单API
 import ProductionOrderSaleOrderEnableList from './components/ProductionOrderSaleOrderEnableList.vue'
 import ProductionOrderItemForm from './components/ProductionOrderItemForm.vue'
 // DictTag组件通过auto-import自动导入，无需手动导入
-
-
 
 
 /** ERP 生产订单 表单 */
@@ -330,6 +325,13 @@ const open = async (type: string, id?: number) => {
     try {
       formData.value = await EprProductionOrderApi.getEprProductionOrder(id)
       
+      // 根据是否有关联销售订单设置addMode
+      if (formData.value.saleOrderId) {
+        addMode.value = 'order' // 有关联销售订单，设置为关联订单模式
+      } else {
+        addMode.value = 'manual' // 没有关联销售订单，设置为手动添加模式
+      }
+      
       // 在详情或编辑模式下，如果有关联的销售订单，只获取订单号
       if ((type === 'detail' || type === 'update') && formData.value.saleOrderId) {
         try {
@@ -362,20 +364,24 @@ const open = async (type: string, id?: number) => {
           let availableCount = 0
           
           // 如果有关联的销售订单，从销售订单项中获取数量信息
-            if (formData.value.saleOrderId) {
-              try {
-                const saleOrderItems = await EprProductionOrderApi.getSaleOrderItemsByOrderId(formData.value.saleOrderId)
-                if (saleOrderItems && saleOrderItems.length > 0) {
-                  const orderItem = saleOrderItems.find(item => item.productId === formData.value.productId)
-                  if (orderItem) {
-                    orderCount = parseFloat(orderItem.count) || 0
-                    availableCount = orderCount - (parseFloat(orderItem.outCount) || 0)
-                  }
+          if (formData.value.saleOrderId) {
+            try {
+              const saleOrderItems = await EprProductionOrderApi.getSaleOrderItemsByOrderId(formData.value.saleOrderId)
+              if (saleOrderItems && saleOrderItems.length > 0) {
+                const orderItem = saleOrderItems.find(item => item.productId === formData.value.productId)
+                if (orderItem) {
+                  orderCount = parseFloat(orderItem.count) || 0
+                  availableCount = orderCount - (parseFloat(orderItem.outCount) || 0)
                 }
-              } catch (error) {
-                console.error('获取销售订单项信息失败:', error)
               }
+            } catch (error) {
+              console.error('获取销售订单项信息失败:', error)
             }
+          } else {
+            // 手动添加的生产订单，使用plannedQuantity作为订单数量
+            orderCount = parseFloat(formData.value.plannedQuantity) || 0
+            availableCount = orderCount // 手动添加时，可生产数量等于计划数量
+          }
           
           // 构建当前生产订单的产品项
           formData.value.items = [{
@@ -384,8 +390,8 @@ const open = async (type: string, id?: number) => {
             productBarCode: product?.barCode || '',
             productUnitName: unitName,
             productPrice: product?.salePrice || 0, // 产品单价字段
-            count: orderCount, // 订单数量字段
-            availableCount: availableCount, // 可生产数量字段
+            count: String(orderCount), // 确保订单数量是字符串类型
+            availableCount: String(availableCount), // 确保可生产数量是字符串类型
             warehouseId: formData.value.warehouseId,
             priority: formData.value.priority || 1,
             remark: formData.value.remark || ''
@@ -443,8 +449,8 @@ const submitForm = async () => {
     }
     
     if (formType.value === 'create') {
-      // 检查是否有关联销售订单且包含多个产品
-      if (formData.value.saleOrderId && formData.value.items && formData.value.items.length > 1) {
+      // 检查是否有关联销售订单且包含多个产品（仅限关联订单模式）
+      if (addMode.value === 'order' && formData.value.saleOrderId && formData.value.items && formData.value.items.length > 1) {
         // 一对一拆分：为每个产品创建一个独立的生产订单
         const createdOrders = []
         for (const item of formData.value.items) {
@@ -476,7 +482,50 @@ const submitForm = async () => {
             plannedEndDate: formData.value.plannedEndDate,
             remark: item.remark || formData.value.remark
           }
+
+          console.log('创建生产订单时的数据:', orderData)
+
+          try {
+            const orderId = await EprProductionOrderApi.createEprProductionOrder(orderData)
+            createdOrders.push(orderId)
+          } catch (error) {
+            console.error(`创建产品 ${item.productName} 的生产订单失败:`, error)
+            message.error(`创建产品 ${item.productName} 的生产订单失败`)
+            return
+          }
+        }
+        message.success(`成功创建 ${createdOrders.length} 个生产订单`)
+      } else if (addMode.value === 'manual' && formData.value.items && formData.value.items.length > 1) {
+        // 手动添加模式下的多个产品处理：为每个产品创建独立的生产订单
+        const createdOrders = []
+        for (const item of formData.value.items) {
+          // 验证必填字段
+          if (!item.productId) {
+            message.error(`请选择产品`)
+            return
+          }
+          if (!item.warehouseId) {
+            message.error(`产品 ${item.productName} 的仓库不能为空`)
+            return
+          }
+          if (!item.count || parseFloat(item.count) <= 0) {
+            message.error(`产品 ${item.productName} 的订单数量不能为空且必须大于0`)
+            return
+          }
           
+          const orderData = {
+            productId: item.productId,
+            warehouseId: item.warehouseId,
+            plannedQuantity: parseFloat(item.count), // 计划生产数量
+            priority: item.priority || 1, // 默认普通优先级
+            status: formData.value.status || 10, // 默认待生产状态
+            plannedStartDate: formData.value.plannedStartDate,
+            plannedEndDate: formData.value.plannedEndDate,
+            remark: item.remark || formData.value.remark
+          }
+
+          console.log('手动添加模式创建生产订单时的数据:', orderData)
+
           try {
             const orderId = await EprProductionOrderApi.createEprProductionOrder(orderData)
             createdOrders.push(orderId)

@@ -5,6 +5,7 @@ export interface EprProductionOrderVO {
   id: number // 主键，自动递增
   orderNo: string // 订单编号，唯一标识
   productId: number // 产品ID，关联到 erp_product
+  plannedQuantity: number // 计划生产数量
   plannedStartDate: Date // 计划开始日期
   plannedEndDate: Date // 计划结束日期
   actualStartDate: Date // 实际开始日期
@@ -63,7 +64,7 @@ export const EprProductionOrderApi = {
 
   // 获取可用于生产的销售订单列表（包含订单项信息）
   getProductionEnableSaleOrders: async (params: {
-    customerId: number
+    customerId?: number
     orderNo?: string
     productName?: string
   }) => {

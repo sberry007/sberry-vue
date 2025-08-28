@@ -187,19 +187,19 @@
             type="success"
             @click="handleUpdateStatus(scope.row.id, 20)"
             v-hasPermi="['erp:production-in:update-status']"
-            v-if="scope.row.status == 10"
+            :disabled="scope.row.status == 20"
           >
             审批
           </el-button>
-          <el-button
-            link
-            type="warning"
-            @click="handleUpdateStatus(scope.row.id, 10)"
-            v-hasPermi="['erp:production-in:update-status']"
-            v-if="scope.row.status === 20"
-          >
-            反审批
-          </el-button>
+<!--          <el-button-->
+<!--            link-->
+<!--            type="warning"-->
+<!--            @click="handleUpdateStatus(scope.row.id, 10)"-->
+<!--            v-hasPermi="['erp:production-in:update-status']"-->
+<!--            v-if="scope.row.status === 20"-->
+<!--          >-->
+<!--            反审批-->
+<!--          </el-button>-->
           <el-button
             link
             type="danger"
@@ -230,7 +230,7 @@ import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import { ProductionStockInApi, ProductionStockInVO } from '@/api/erp/production/stockIn'
 import ProductionStockInForm from './ProductionStockInForm.vue'
-import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
+import { DICT_TYPE } from '@/utils/dict'
 import { WarehouseApi, WarehouseVO } from '@/api/erp/stock/warehouse'
 import { EprProductionOrderApi, EprProductionOrderVO } from '@/api/erp/production/order'
 import { ProductApi, ProductVO } from '@/api/erp/product/product'
@@ -309,7 +309,7 @@ const handleDelete = async (id: number) => {
 const handleUpdateStatus = async (id: number, status: number) => {
   try {
     // 状态更新的二次确认
-    const statusText = status === 2 ? '审批' : '反审批'
+    const statusText = status === 20 ? '审批' : '反审批'
     await message.confirm(`确定要${statusText}该入库记录吗？`)
     // 发起状态更新
     await ProductionStockInApi.updateProductionStockInStatus(id, status)
@@ -362,7 +362,7 @@ const getProductionOrderList = async () => {
       const data = await EprProductionOrderApi.getEprProductionOrderPage({
         status: 20, // 已审批状态
         pageNo: 1,
-        pageSize: 1000
+        pageSize: 10
       })
       productionOrderList.value = data.list
     } catch (fallbackError) {

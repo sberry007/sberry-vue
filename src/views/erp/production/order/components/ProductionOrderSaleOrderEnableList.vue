@@ -201,12 +201,12 @@ const open = async () => {
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 
 /** 提交选择 */
-const emits = defineEmits<{
+const emit = defineEmits<{
   (e: 'success', value: SaleOrderVO): void
 }>()
 const submitForm = () => {
   try {
-    emits('success', currentRow.value)
+    emit('success', currentRow.value)
   } finally {
     // 关闭弹窗
     dialogVisible.value = false
