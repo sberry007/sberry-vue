@@ -218,7 +218,7 @@
             </el-col>
           </el-row>
           <el-form-item label="超时锁库时间" prop="lockTimeoutS">
-            <el-input-number v-model="bindDeviceForm.lockTimeoutS" :min="60" :max="3600" :step="60" style="width: 200px" />
+            <el-input-number v-model="bindDeviceForm.lockTimeoutS" :min="10" :max="3600" :step="10" style="width: 200px" />
             <span class="ml-2 text-gray-500">秒（超时锁单时间）</span>
           </el-form-item>
         </el-form>
@@ -295,8 +295,8 @@ const bindDeviceForm = ref<DeviceBindReqVO>({
   warehouseId: 0,
   deviceId: 0,
   minTemp: 2,
-  maxTemp: 8,
-  lockTimeoutS: 300
+  maxTemp: 10,
+  lockTimeoutS: 15
 })
 const bindDeviceFormRef = ref()
 const bindDeviceLoading = ref(false)

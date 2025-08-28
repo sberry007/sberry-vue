@@ -164,7 +164,7 @@
                 <el-form-item label="锁单超时时间" prop="lockTimeoutS">
                   <el-input-number 
                     v-model="deviceFormData.lockTimeoutS" 
-                    :min="1" 
+                    :min="10" 
                     :max="3600" 
                     :precision="0"
                     controls-position="right"
@@ -251,7 +251,7 @@ const deviceFormRules = reactive({
   ],
   lockTimeoutS: [
     { required: true, message: '请输入锁单超时时间', trigger: 'blur' },
-    { min: 1, message: '超时时间必须大于0', trigger: 'blur' }
+    { min: 10, message: '超时时间必须大于等于10秒', trigger: 'blur' }
   ]
 })
 const formRef = ref() // 表单 Ref
