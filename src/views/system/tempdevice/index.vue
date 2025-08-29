@@ -250,7 +250,7 @@
 import { formatDate } from '@/utils/formatTime'
 import { TempDeviceApi, TempDeviceVO } from '@/api/system/tempdevice'
 import { useMessage } from '@/hooks/web/useMessage'
-import { tempDeviceWebSocket, type TempDeviceStatusMessage } from '@/utils/websocket/tempDeviceWebSocket'
+import { tempDeviceWebSocket, type TempDeviceStatusMessage } from '@/websocket/tempDeviceWebSocket'
 import TempDeviceForm from './TempDeviceForm.vue'
 import DeviceDetailDialog from './DeviceDetailDialog.vue'
 
@@ -434,32 +434,23 @@ const connectWebSocket = () => {
 
 // 处理温控设备状态消息
 const handleTempDeviceStatus = (deviceStatus: TempDeviceStatusMessage) => {
-  console.log('收到设备状态变更:', deviceStatus)
-  
   // 使用nextTick确保在Vue更新周期中执行ElMessage
   nextTick(() => {
     try {
       switch (deviceStatus.statusType) {
         case 'ONLINE':
-          console.log('执行 ElMessage.success')
           ElMessage.success(`设备 "${deviceStatus.deviceName}" 已上线`)
           break
         case 'OFFLINE':
-          console.log('执行 ElMessage.warning')
           ElMessage.warning(`设备 "${deviceStatus.deviceName}" 已下线`)
           break
         case 'ACTIVATED':
-          console.log('执行 ElMessage.success')
           ElMessage.success(`设备 "${deviceStatus.deviceName}" 已激活`)
           break
         case 'DEACTIVATED':
-          console.log('执行 ElMessage.warning')
           ElMessage.warning(`设备 "${deviceStatus.deviceName}" 已停用`)
           break
-        default:
-          console.log('未知的状态类型:', deviceStatus.statusType)
       }
-      console.log('消息提示执行完成')
     } catch (error) {
       console.error('消息提示执行出错:', error)
     }

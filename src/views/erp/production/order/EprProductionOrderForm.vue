@@ -621,7 +621,7 @@ const loadCustomerList = async () => {
 /** 打开【可生产的销售订单列表】弹窗 */
 const saleOrderEnableListRef = ref() // 可生产的销售订单列表 Ref
 const openSaleOrderEnableList = () => {
-  console.log('打开可生产的销售订单列表')
+
   saleOrderEnableListRef.value.open()
 }
 
@@ -632,8 +632,7 @@ const handleItemsUpdate = (updatedItems: any[]) => {
 
 /** 处理销售订单选择 */
 const handleSaleOrderChange = async (order: any) => {
-  console.log('选择的销售订单数据:', order)
-  console.log('订单项数据:', order.items)
+
 
   // 将订单设置到生产订单
   formData.value.saleOrderId = order.id
@@ -683,7 +682,7 @@ const handleSaleOrderChange = async (order: any) => {
         remark: item.remark || '' // 保留销售订单中的备注内容
       }
     }))
-    console.log('填充后的产品清单:', formData.value.items)
+  
   }
   
   // 如果订单只有一个产品，自动填充产品信息

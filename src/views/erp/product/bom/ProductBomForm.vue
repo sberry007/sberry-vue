@@ -203,6 +203,7 @@ const formRules = reactive({
               version: value,
               excludeId: formData.value.id
             })
+      
             console.log('isUnique', isUnique)
             if (!isUnique) {
               callback(new Error('该产品的版本号已存在，请使用其他版本号'))
