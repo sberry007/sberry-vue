@@ -104,11 +104,16 @@
           {{ getMaterialPurchaseUnit(row) }}
         </template>
       </el-table-column>
-      <el-table-column label="单位换算" width="120" align="center">
+      <el-table-column label="单位换算" width="150" align="center">
         <template #default="{ row }">
-          <el-tag v-if="needUnitConversion(row)" type="warning" size="small">
-            需要换算
-          </el-tag>
+          <div v-if="needUnitConversion(row)">
+            <el-tag type="warning" size="small" style="margin-bottom: 2px;">
+              需要换算
+            </el-tag>
+            <div style="font-size: 11px; color: #666;">
+              {{ getUnitConversionInfo(row) }}
+            </div>
+          </div>
           <el-tag v-else type="success" size="small">
             无需换算
           </el-tag>
@@ -150,7 +155,6 @@
 import { ProductBomCostApi, ProductBomCostVO } from '@/api/erp/product/bomCost'
 import { DICT_TYPE } from '@/utils/dict'
 import { formatDate as formatDateUtil } from '@/utils/formatTime'
-import { formatToFraction } from '@/utils'
 import * as echarts from 'echarts'
 
 /** BOM成本计算详情 */
@@ -339,11 +343,26 @@ const needUnitConversion = (row: any) => {
   return row.unitId !== row.materialPurchaseUnitId
 }
 
+/** 获取单位换算信息 */
+const getUnitConversionInfo = (row: any) => {
+  if (!needUnitConversion(row)) return ''
+  const bomUnit = row.unitName || '未知单位'
+  const purchaseUnit = row.materialPurchaseUnitName || '未知单位'
+  return `${purchaseUnit} → ${bomUnit}`
+}
+
 /** 计算单项材料成本 */
 const calculateItemCost = (row: any) => {
-  if (!row.materialPurchasePrice || !row.requiredQty) return 0
-  // 这里简化处理，实际成本计算在后端已经考虑了单位换算
-  return row.materialPurchasePrice * row.requiredQty
+  // 直接使用后端计算好的单项成本（已包含单位转换）
+  if (row.itemCost !== undefined && row.itemCost !== null) {
+    return row.itemCost.toFixed(2)
+  }
+  
+  // 兜底逻辑：如果后端没有返回itemCost，使用原始计算
+  if (!row.materialPurchasePrice || !row.requiredQty) return '0.00'
+  
+  let actualCost = row.materialPurchasePrice * row.requiredQty
+  return actualCost.toFixed(2)
 }
 
 /** 重置表单 */
