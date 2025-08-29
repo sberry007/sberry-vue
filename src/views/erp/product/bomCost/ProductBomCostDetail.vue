@@ -348,7 +348,7 @@ const getUnitConversionInfo = (row: any) => {
   if (!needUnitConversion(row)) return ''
   const bomUnit = row.unitName || '未知单位'
   const purchaseUnit = row.materialPurchaseUnitName || '未知单位'
-  return `${bomUnit} → ${purchaseUnit}`
+  return `${purchaseUnit} → ${bomUnit}`
 }
 
 /** 计算单项材料成本 */
