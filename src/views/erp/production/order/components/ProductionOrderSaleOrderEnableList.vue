@@ -193,7 +193,7 @@ const open = async () => {
   queryParams.orderTime = []
   queryParams.pageNo = 1
   // 先加载产品列表和客户列表
-  productList.value = await ProductApi.getProductSimpleList()
+  productList.value = await ProductApi.getProductSimpleListByType("FP")
   customerList.value = await CustomerApi.getCustomerSimpleList()
   // 然后加载可生产的订单列表
   await getList()

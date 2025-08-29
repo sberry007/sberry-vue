@@ -81,8 +81,7 @@
 import { ProductionStockInApi, ProductionStockInVO } from '@/api/erp/production/stockIn'
 import { WarehouseApi, WarehouseVO } from '@/api/erp/stock/warehouse'
 import { EprProductionOrderApi, EprProductionOrderVO } from '@/api/erp/production/order'
-import { ProductApi, ProductVO } from '@/api/erp/product/product'
-import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
+import { ProductApi } from '@/api/erp/product/product'
 
 /** ERP 生产入库记录 表单 */
 defineOptions({ name: 'ProductionStockInForm' })
@@ -115,13 +114,13 @@ const formRules = reactive({
           callback()
           return
         }
-        
+
         const quantity = parseFloat(value) || 0
         if (quantity <= 0) {
           callback(new Error('入库数量必须大于0'))
           return
         }
-        
+
         try {
           // 获取生产订单详情，包含销售订单项信息
           const orderDetail = await EprProductionOrderApi.getEprProductionOrder(formData.value.orderId)
