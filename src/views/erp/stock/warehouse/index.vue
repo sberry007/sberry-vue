@@ -100,7 +100,7 @@
       <el-table-column label="实时数据" align="center" width="180px">
         <template #default="scope">
           <div v-if="scope.row.warehouseType === WAREHOUSE_TYPE.TEMP_CONTROLLED">
-            <div v-if="realtimeData[scope.row.id]" class="realtime-data">
+            <div v-if="realtimeData[scope.row.id]" class="realtime-data" :class="{ 'temp-warning': realtimeData[scope.row.id].tempOutOfRange }">
               <div class="temp-data">
                 <el-icon class="data-icon temp-icon"><HotWater /></el-icon>
                 <span>{{ realtimeData[scope.row.id].temperature }}°C</span>
@@ -311,7 +311,7 @@ const tempDetailDialogVisible = ref(false)
 const selectedTempWarehouse = ref<WarehouseVO | null>(null)
 
 // WebSocket 和实时数据相关
-const realtimeData = ref<Record<number, { temperature: number; humidity: number; timestamp: number; isLocked?: boolean; lockReason?: string; lockTime?: string }>>({})
+const realtimeData = ref<Record<number, { temperature: number; humidity: number; timestamp: number; isLocked?: boolean; lockReason?: string; lockTime?: string; tempOutOfRange?: boolean }>>({})
 
 // 表单验证规则
 const bindDeviceRules = {
@@ -583,13 +583,23 @@ onMounted(() => {
       }, 50) // 短暂延迟确保连接状态稳定
     },
     onTempData: (data: WarehouseTempMessage) => {
+      // 检查温度范围状态
+      let tempOutOfRange = false
+      if (data.minTemperature !== undefined && data.maxTemperature !== undefined) {
+        const currentTemp = data.temperature
+        const minTemp = data.minTemperature
+        const maxTemp = data.maxTemperature
+        tempOutOfRange = currentTemp < minTemp || currentTemp > maxTemp
+      }
+      
       realtimeData.value[data.warehouseId] = {
         temperature: data.temperature,
         humidity: data.humidity,
         timestamp: data.timestamp ? new Date(data.timestamp).getTime() : Date.now(),
         isLocked: data.isLocked,
         lockReason: data.lockReason,
-        lockTime: data.lockTime
+        lockTime: data.lockTime,
+        tempOutOfRange: tempOutOfRange
       }
     },
     onAlarm: (data: WarehouseTempMessage) => {
@@ -721,6 +731,32 @@ onUnmounted(() => {
     .humidity-icon {
       color: #409eff;
     }
+  }
+  
+  /* 温度超出范围时的闪烁效果 */
+  &.temp-warning {
+    animation: tempWarningBlink 1s infinite;
+    
+    .temp-data {
+      color: #f56c6c;
+      font-weight: bold;
+      
+      .temp-icon {
+        color: #f56c6c;
+      }
+    }
+  }
+}
+
+/* 温度警告闪烁动画 */
+@keyframes tempWarningBlink {
+  0%, 50% {
+    background-color: rgba(245, 108, 108, 0.1);
+    border-radius: 4px;
+  }
+  51%, 100% {
+    background-color: rgba(245, 108, 108, 0.3);
+    border-radius: 4px;
   }
 }
 

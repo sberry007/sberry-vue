@@ -70,6 +70,8 @@ export interface WarehouseTempMessage {
   isLocked?: boolean
   lockReason?: string
   lockTime?: string // LocalDateTime格式
+  minTemperature?: number // 最低温度
+  maxTemperature?: number // 最高温度
 }
 
 /**

@@ -43,7 +43,20 @@
           
           <div class="temp-range-info">
             <span class="range-label">温度范围：</span>
-            <span class="range-value">{{ warehouse?.minTemp }}°C ~ {{ warehouse?.maxTemp }}°C</span>
+            <span class="range-value">
+              {{ realtimeData?.minTemperature ?? warehouse?.minTemp }}°C ~ 
+              {{ realtimeData?.maxTemperature ?? warehouse?.maxTemp }}°C
+            </span>
+          </div>
+          
+          <!-- 温度状态指示 -->
+          <div v-if="realtimeData && realtimeData.minTemperature !== undefined && realtimeData.maxTemperature !== undefined" class="temp-status-info">
+            <div class="temp-status" :class="getTempStatusClass()">
+              <el-icon class="status-icon">
+                <component :is="getTempStatusClass() === 'normal' ? 'Check' : 'Warning'" />
+              </el-icon>
+              <span class="status-text">{{ getTempStatusText() }}</span>
+            </div>
           </div>
         </div>
       </el-card>
@@ -64,14 +77,14 @@
 <script setup lang="ts">
 import { ref, nextTick, onUnmounted, computed, watch } from 'vue'
 import { WarehouseApi, type WarehouseVO, type WarehouseTempDataVO } from '@/api/erp/stock/warehouse'
-import { HotWater, Drizzling, Lock } from '@element-plus/icons-vue'
+import { HotWater, Drizzling, Lock, Warning, Check } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import type { ECharts } from 'echarts'
 
 interface Props {
   modelValue: boolean
   warehouse: WarehouseVO | null
-  realtimeTempData: { temperature: number; humidity: number; timestamp: number; isLocked?: boolean; lockReason?: string; lockTime?: string } | null
+  realtimeTempData: { temperature: number; humidity: number; timestamp: number; isLocked?: boolean; lockReason?: string; lockTime?: string; minTemperature?: number; maxTemperature?: number } | null
 }
 
 interface Emits {
@@ -92,7 +105,7 @@ const tempChart = ref<ECharts | null>(null)
 const tempHistoryData = ref<WarehouseTempDataVO[]>([])
 
 // 实时数据
-const realtimeData = ref<{ temperature: number; humidity: number; timestamp: number } | null>(null)
+const realtimeData = ref<{ temperature: number; humidity: number; timestamp: number; minTemperature?: number; maxTemperature?: number } | null>(null)
 
 // 锁库信息计算属性
 const lockInfo = computed(() => {
@@ -126,6 +139,44 @@ const formatLockTime = (lockTime?: string) => {
   }
 }
 
+/** 获取温度状态样式类 */
+const getTempStatusClass = () => {
+  if (!realtimeData.value || realtimeData.value.minTemperature === undefined || realtimeData.value.maxTemperature === undefined) {
+    return 'normal'
+  }
+  
+  const currentTemp = realtimeData.value.temperature
+  const minTemp = realtimeData.value.minTemperature
+  const maxTemp = realtimeData.value.maxTemperature
+  
+  if (currentTemp < minTemp) {
+    return 'low-temp'
+  } else if (currentTemp > maxTemp) {
+    return 'high-temp'
+  } else {
+    return 'normal'
+  }
+}
+
+/** 获取温度状态文本 */
+const getTempStatusText = () => {
+  if (!realtimeData.value || realtimeData.value.minTemperature === undefined || realtimeData.value.maxTemperature === undefined) {
+    return '温度正常'
+  }
+  
+  const currentTemp = realtimeData.value.temperature
+  const minTemp = realtimeData.value.minTemperature
+  const maxTemp = realtimeData.value.maxTemperature
+  
+  if (currentTemp < minTemp) {
+    return `温度过低 (低于${minTemp}°C)`
+  } else if (currentTemp > maxTemp) {
+    return `温度过高 (超过${maxTemp}°C)`
+  } else {
+    return '温度正常'
+  }
+}
+
 /** 打开温控详情 */
 const openTempDetail = async () => {
   if (!props.warehouse) return
@@ -146,7 +197,9 @@ const openTempDetail = async () => {
       realtimeData.value = {
         temperature: props.realtimeTempData.temperature,
         humidity: props.realtimeTempData.humidity,
-        timestamp: props.realtimeTempData.timestamp
+        timestamp: props.realtimeTempData.timestamp,
+        minTemperature: props.realtimeTempData.minTemperature,
+        maxTemperature: props.realtimeTempData.maxTemperature
       }
     }
     
@@ -309,7 +362,9 @@ watch(() => props.realtimeTempData, (newData) => {
     realtimeData.value = {
       temperature: newData.temperature,
       humidity: newData.humidity,
-      timestamp: newData.timestamp
+      timestamp: newData.timestamp,
+      minTemperature: newData.minTemperature,
+      maxTemperature: newData.maxTemperature
     }
   }
 }, { deep: true })
@@ -459,5 +514,53 @@ onUnmounted(() => {
 .temp-chart {
   width: 100%;
   height: 100%;
+}
+
+/* 温度状态指示样式 */
+.temp-status-info {
+  text-align: center;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 16px;
+}
+
+.temp-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  
+  &.normal {
+    color: #67c23a;
+    background-color: #f0f9ff;
+    border: 1px solid #b3d8ff;
+  }
+  
+  &.low-temp, &.high-temp {
+    color: #f56c6c;
+    background-color: rgba(245, 108, 108, 0.1);
+    border: 1px solid rgba(245, 108, 108, 0.3);
+    animation: tempStatusBlink 1s infinite;
+    font-weight: bold;
+  }
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.status-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 温度状态闪烁动画 */
+@keyframes tempStatusBlink {
+  0%, 50% {
+    background-color: rgba(245, 108, 108, 0.1);
+  }
+  51%, 100% {
+    background-color: rgba(245, 108, 108, 0.3);
+  }
 }
 </style>
