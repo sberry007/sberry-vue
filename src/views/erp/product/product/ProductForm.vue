@@ -621,9 +621,7 @@ const submitForm = async () => {
             bomItems: cleanedBomItems
           }
 
-          console.log('准备保存BOM数据:', bomData)
           await ProductBomApi.createProductBom(bomData)
-          console.log('BOM数据保存成功')
         } else {
           // 编辑模式：只更新BOM明细，忽略BOM基本信息
           if (formData.value.bomId) {
@@ -632,9 +630,7 @@ const submitForm = async () => {
               ...item,
               bomId: formData.value.bomId
             }))
-            console.log('准备更新BOM明细数据:', bomItemsWithBomId)
             await ProductBomItemApi.saveBomItemsBatch(formData.value.bomId, bomItemsWithBomId)
-            console.log('BOM明细数据更新成功')
           }
         }
       } catch (bomError) {

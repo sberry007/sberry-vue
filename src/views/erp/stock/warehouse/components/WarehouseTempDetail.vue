@@ -1,0 +1,566 @@
+<template>
+  <el-dialog v-model="visible" title="温控详情" width="1000px" @close="handleClose">
+    <div class="temp-detail-container">
+      <!-- 实时数据显示区域 -->
+      <el-card class="realtime-card" shadow="never">
+        <template #header>
+          <span class="font-semibold">实时数据</span>
+        </template>
+        <div class="realtime-content">
+          <div class="realtime-data-display">
+            <div v-if="realtimeData" class="realtime-data">
+              <div class="temp-data">
+                <el-icon class="data-icon temp-icon"><HotWater /></el-icon>
+                <span>{{ realtimeData.temperature }}°C</span>
+              </div>
+              <div class="humidity-data">
+                <el-icon class="data-icon humidity-icon"><Drizzling /></el-icon>
+                <span>{{ realtimeData.humidity }}%</span>
+              </div>
+            </div>
+            <div v-else class="no-data">
+              <span class="text-gray-400">暂无数据</span>
+            </div>
+          </div>
+          
+          <!-- 锁库状态显示 -->
+          <div v-if="lockInfo" class="lock-status-info">
+            <div class="lock-status">
+              <el-icon class="lock-icon"><Lock /></el-icon>
+              <span class="lock-text">仓库已锁定</span>
+            </div>
+            <div class="lock-details">
+              <div class="lock-reason">
+                <span class="lock-label">锁定原因：</span>
+                <span class="lock-value">{{ lockInfo.lockReason }}</span>
+              </div>
+              <div class="lock-time">
+                <span class="lock-label">锁定时间：</span>
+                <span class="lock-value">{{ formatLockTime(lockInfo.lockTime) }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="temp-range-info">
+            <span class="range-label">温度范围：</span>
+            <span class="range-value">
+              {{ realtimeData?.minTemperature ?? warehouse?.minTemp }}°C ~ 
+              {{ realtimeData?.maxTemperature ?? warehouse?.maxTemp }}°C
+            </span>
+          </div>
+          
+          <!-- 温度状态指示 -->
+          <div v-if="realtimeData && realtimeData.minTemperature !== undefined && realtimeData.maxTemperature !== undefined" class="temp-status-info">
+            <div class="temp-status" :class="getTempStatusClass()">
+              <el-icon class="status-icon">
+                <component :is="getTempStatusClass() === 'normal' ? 'Check' : 'Warning'" />
+              </el-icon>
+              <span class="status-text">{{ getTempStatusText() }}</span>
+            </div>
+          </div>
+        </div>
+      </el-card>
+      
+      <!-- 历史数据图表 -->
+      <el-card class="chart-card" shadow="never">
+        <template #header>
+          <span class="font-semibold">近两小时温湿度变化趋势</span>
+        </template>
+        <div class="temp-chart-container">
+          <div ref="tempChartRef" class="temp-chart"></div>
+        </div>
+      </el-card>
+    </div>
+  </el-dialog>
+</template>
+
+<script setup lang="ts">
+import { ref, nextTick, onUnmounted, computed, watch } from 'vue'
+import { WarehouseApi, type WarehouseVO, type WarehouseTempDataVO } from '@/api/erp/stock/warehouse'
+import { HotWater, Drizzling, Lock, Warning, Check } from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
+import type { ECharts } from 'echarts'
+
+interface Props {
+  modelValue: boolean
+  warehouse: WarehouseVO | null
+  realtimeTempData: { temperature: number; humidity: number; timestamp: number; isLocked?: boolean; lockReason?: string; lockTime?: string; minTemperature?: number; maxTemperature?: number } | null
+}
+
+interface Emits {
+  (e: 'update:modelValue', value: boolean): void
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+const visible = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value)
+})
+
+const message = useMessage()
+const tempChartRef = ref<HTMLDivElement>()
+const tempChart = ref<ECharts | null>(null)
+const tempHistoryData = ref<WarehouseTempDataVO[]>([])
+
+// 实时数据
+const realtimeData = ref<{ temperature: number; humidity: number; timestamp: number; minTemperature?: number; maxTemperature?: number } | null>(null)
+
+// 锁库信息计算属性
+const lockInfo = computed(() => {
+  if (!props.realtimeTempData?.isLocked) return null
+  return {
+    lockReason: props.realtimeTempData.lockReason || '未知原因',
+    lockTime: props.realtimeTempData.lockTime
+  }
+})
+
+// 查询表单
+const queryForm = ref({
+  startTime: '',
+  endTime: ''
+})
+
+/** 格式化锁库时间 */
+const formatLockTime = (lockTime?: string) => {
+  if (!lockTime) return '未知时间'
+  try {
+    return new Date(lockTime).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch (error) {
+    return lockTime
+  }
+}
+
+/** 获取温度状态样式类 */
+const getTempStatusClass = () => {
+  if (!realtimeData.value || realtimeData.value.minTemperature === undefined || realtimeData.value.maxTemperature === undefined) {
+    return 'normal'
+  }
+  
+  const currentTemp = realtimeData.value.temperature
+  const minTemp = realtimeData.value.minTemperature
+  const maxTemp = realtimeData.value.maxTemperature
+  
+  if (currentTemp < minTemp) {
+    return 'low-temp'
+  } else if (currentTemp > maxTemp) {
+    return 'high-temp'
+  } else {
+    return 'normal'
+  }
+}
+
+/** 获取温度状态文本 */
+const getTempStatusText = () => {
+  if (!realtimeData.value || realtimeData.value.minTemperature === undefined || realtimeData.value.maxTemperature === undefined) {
+    return '温度正常'
+  }
+  
+  const currentTemp = realtimeData.value.temperature
+  const minTemp = realtimeData.value.minTemperature
+  const maxTemp = realtimeData.value.maxTemperature
+  
+  if (currentTemp < minTemp) {
+    return `温度过低 (低于${minTemp}°C)`
+  } else if (currentTemp > maxTemp) {
+    return `温度过高 (超过${maxTemp}°C)`
+  } else {
+    return '温度正常'
+  }
+}
+
+/** 打开温控详情 */
+const openTempDetail = async () => {
+  if (!props.warehouse) return
+  
+  try {
+    // 清空之前的数据
+    tempHistoryData.value = []
+    realtimeData.value = null
+    
+    // 销毁之前的图表
+    if (tempChart.value) {
+      tempChart.value.dispose()
+      tempChart.value = null
+    }
+    
+    // 设置实时数据
+    if (props.realtimeTempData) {
+      realtimeData.value = {
+        temperature: props.realtimeTempData.temperature,
+        humidity: props.realtimeTempData.humidity,
+        timestamp: props.realtimeTempData.timestamp,
+        minTemperature: props.realtimeTempData.minTemperature,
+        maxTemperature: props.realtimeTempData.maxTemperature
+      }
+    }
+    
+    // 设置默认查询时间范围为近两小时
+    const now = new Date()
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
+    
+    // 获取历史数据 - 获取最近2小时的数据
+    const historyData = await WarehouseApi.getWarehouseTempDataByTimeRange({
+      warehouseId: props.warehouse.id,
+      hours: 2 // 默认查询2小时
+    })
+    tempHistoryData.value = historyData || []
+    
+    // 初始化图表
+    await nextTick()
+    initTempChart()
+  } catch (error) {
+    console.error('获取温控数据失败:', error)
+    message.error('获取温控数据失败')
+  }
+}
+
+/** 初始化温控图表 */
+const initTempChart = () => {
+  if (!tempChartRef.value) return
+  
+  tempChart.value = echarts.init(tempChartRef.value)
+  updateTempChart()
+}
+
+/** 更新温控图表 */
+const updateTempChart = () => {
+  if (!tempChart.value) return
+  
+  // 如果没有历史数据，显示空数据提示
+  if (!tempHistoryData.value.length) {
+    const emptyOption = {
+      title: {
+        text: '近两小时温湿度变化趋势',
+        left: 'center'
+      },
+      graphic: {
+        type: 'text',
+        left: 'center',
+        top: 'middle',
+        style: {
+          text: '暂无历史数据',
+          fontSize: 16,
+          fill: '#999'
+        }
+      }
+    }
+    tempChart.value.setOption(emptyOption)
+    return
+  }
+  
+  const times = tempHistoryData.value.map(item => {
+    // 使用timestamp作为时间戳
+    return new Date(item.timestamp).toLocaleTimeString()
+  })
+  const temperatures = tempHistoryData.value.map(item => item.temperature)
+  const humidities = tempHistoryData.value.map(item => item.humidity)
+  
+  
+  const option = {
+    title: {
+      text: '温湿度变化趋势',
+      left: 'center'
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross'
+      }
+    },
+    legend: {
+      data: ['温度', '湿度'],
+      top: 30
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: times
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '温度(°C)',
+        position: 'left',
+        axisLabel: {
+          formatter: '{value} °C'
+        }
+      },
+      {
+        type: 'value',
+        name: '湿度(%)',
+        position: 'right',
+        axisLabel: {
+          formatter: '{value} %'
+        }
+      }
+    ],
+    series: [
+      {
+        name: '温度',
+        type: 'line',
+        yAxisIndex: 0,
+        data: temperatures,
+        smooth: true,
+        itemStyle: {
+          color: '#409EFF'
+        }
+      },
+      {
+        name: '湿度',
+        type: 'line',
+        yAxisIndex: 1,
+        data: humidities,
+        smooth: true,
+        itemStyle: {
+          color: '#67C23A'
+        }
+      }
+    ]
+  }
+  
+  tempChart.value.setOption(option)
+}
+
+/** 关闭对话框 */
+const handleClose = () => {
+  // 销毁图表
+  if (tempChart.value) {
+    tempChart.value.dispose()
+    tempChart.value = null
+  }
+  
+  // 清空数据
+  tempHistoryData.value = []
+  realtimeData.value = null
+}
+
+// 监听对话框打开
+watch(() => props.modelValue, (newVal) => {
+  if (newVal) {
+    openTempDetail()
+  }
+})
+
+// 监听实时数据变化
+watch(() => props.realtimeTempData, (newData) => {
+  if (newData) {
+    realtimeData.value = {
+      temperature: newData.temperature,
+      humidity: newData.humidity,
+      timestamp: newData.timestamp,
+      minTemperature: newData.minTemperature,
+      maxTemperature: newData.maxTemperature
+    }
+  }
+}, { deep: true })
+
+// 组件卸载时清理
+onUnmounted(() => {
+  handleClose()
+})
+</script>
+
+<style scoped>
+.temp-detail-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 实时数据卡片样式 */
+.realtime-card {
+  margin-bottom: 16px;
+}
+
+.realtime-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.realtime-data-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60px;
+}
+
+.realtime-data {
+  display: flex;
+  gap: 40px;
+  align-items: center;
+}
+
+.temp-data, .humidity-data {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.data-icon {
+  font-size: 20px;
+}
+
+.temp-icon {
+  color: #f56c6c;
+}
+
+.humidity-icon {
+  color: #409eff;
+}
+
+.no-data {
+  text-align: center;
+  font-size: 14px;
+}
+
+/* 锁库状态样式 */
+.lock-status-info {
+  padding: 16px;
+  background-color: #fef0f0;
+  border: 1px solid #fbc4c4;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.lock-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.lock-icon {
+  font-size: 18px;
+  color: #f56c6c;
+}
+
+.lock-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f56c6c;
+}
+
+.lock-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lock-reason,
+.lock-time {
+  display: flex;
+  align-items: center;
+}
+
+.lock-label {
+  font-size: 14px;
+  color: #909399;
+  margin-right: 8px;
+  min-width: 80px;
+}
+
+.lock-value {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.temp-range-info {
+  text-align: center;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 6px;
+}
+
+.range-label {
+  font-size: 14px;
+  color: #909399;
+  margin-right: 8px;
+}
+
+.range-value {
+  font-size: 16px;
+  font-weight: 500;
+  color: #606266;
+}
+
+/* 图表卡片样式 */
+.chart-card {
+  flex: 1;
+}
+
+.temp-chart-container {
+  height: 400px;
+}
+
+.temp-chart {
+  width: 100%;
+  height: 100%;
+}
+
+/* 温度状态指示样式 */
+.temp-status-info {
+  text-align: center;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 16px;
+}
+
+.temp-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  
+  &.normal {
+    color: #67c23a;
+    background-color: #f0f9ff;
+    border: 1px solid #b3d8ff;
+  }
+  
+  &.low-temp, &.high-temp {
+    color: #f56c6c;
+    background-color: rgba(245, 108, 108, 0.1);
+    border: 1px solid rgba(245, 108, 108, 0.3);
+    animation: tempStatusBlink 1s infinite;
+    font-weight: bold;
+  }
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.status-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 温度状态闪烁动画 */
+@keyframes tempStatusBlink {
+  0%, 50% {
+    background-color: rgba(245, 108, 108, 0.1);
+  }
+  51%, 100% {
+    background-color: rgba(245, 108, 108, 0.3);
+  }
+}
+</style>

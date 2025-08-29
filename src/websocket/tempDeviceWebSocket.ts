@@ -130,7 +130,7 @@ export class TempDeviceWebSocketManager {
    * 处理连接打开
    */
   private handleOpen(): void {
-    console.log('WebSocket 连接已建立')
+
     this.status = WebSocketStatus.OPEN
     this.reconnectAttempts = 0
     // 移除直接的 ElMessage 调用，让组件来处理消息提示
@@ -153,7 +153,7 @@ export class TempDeviceWebSocketManager {
    * 处理连接关闭
    */
   private handleClose(): void {
-    console.log('WebSocket 连接已关闭')
+
     this.status = WebSocketStatus.CLOSED
     this.callbacks.onClose?.()
     this.attemptReconnect()
@@ -185,7 +185,7 @@ export class TempDeviceWebSocketManager {
    * 处理温控设备状态消息
    */
   private handleTempDeviceStatus(deviceStatus: TempDeviceStatusMessage): void {
-    console.log('收到设备状态变更:', deviceStatus)
+
 
     // 调用回调函数，由Vue组件处理消息提示
     this.callbacks.onTempDeviceStatus?.(deviceStatus)
@@ -201,7 +201,7 @@ export class TempDeviceWebSocketManager {
     }
 
     this.reconnectAttempts++
-    console.log(`WebSocket重连中... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`)
+
 
     this.reconnectTimer = setTimeout(() => {
       if (this.status === WebSocketStatus.CLOSED) {
