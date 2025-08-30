@@ -125,7 +125,7 @@
             link
             type="primary"
             @click="openForm('view', scope.row.id)"
-            v-hasPermi="['erp:product:query']"
+            v-hasPermi="['erp:product-bom:query']"
           >
             查看详情
           </el-button>

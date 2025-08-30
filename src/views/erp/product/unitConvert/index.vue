@@ -91,7 +91,7 @@
   <!-- 列表 -->
   <ContentWrap>
     <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true">
-      <el-table-column label="主键" align="center" prop="id" />
+<!--      <el-table-column label="主键" align="center" prop="id" />-->
       <el-table-column label="产品名称" align="center" prop="productName" />
         <el-table-column label="源单位" align="center" prop="fromUnitName" />
         <el-table-column label="目标单位" align="center" prop="toUnitName" />
